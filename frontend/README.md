@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Warungku Frontend
 
-## Getting Started
+Warungku is a local marketplace that helps customers discover neighborhood
+micro, small, and medium-sized businesses (UMKM). This directory contains the
+Next.js frontend.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js App Router and React
+- TypeScript with strict checking
+- Tailwind CSS 4 for component styling and design tokens in `app/globals.css`
+- Lucide React for interface icons
+- Poppins, loaded with `next/font`
+
+## Run locally
+
+From this directory, install dependencies with the package manager specified in
+`package.json`, then run:
+
+```sh
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Useful checks:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+bun run lint
+bun run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project map
 
-## Learn More
+- `app/page.tsx` — homepage route.
+- `app/layout.tsx` — root document, Indonesian locale, metadata, and font.
+- `app/globals.css` — Tailwind import and global design tokens.
+- `components/` — reusable homepage sections and Lucide icon adapter.
+- `lib/home-data.ts` — typed mock categories, stores, products, and benefits.
+- `public/market-hero.svg` — locally hosted hero illustration.
 
-To learn more about Next.js, take a look at the following resources:
+The homepage currently uses mock data. Product and shop photos in
+`lib/home-data.ts` are remote Unsplash image URLs; replace them with approved,
+locally managed assets when the real catalog is connected.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Design system
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Primary: `#227BF3`
+- Secondary: `#DBEDFF`
+- Typeface: Poppins
+- Page language and customer-facing copy: Indonesian
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Keep shared presentation in `components/`, mock content in `lib/`, and theme
+tokens in `app/globals.css`. Use Tailwind utility classes for component styling;
+avoid adding custom CSS classes unless utilities cannot reasonably express the
+design. Use Lucide React icons, semantic HTML, typed data, accessible names for
+controls, and mobile-first responsive behavior.
