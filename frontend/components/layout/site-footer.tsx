@@ -1,4 +1,5 @@
 import { Icon } from "@/components/icon";
+import Link from "next/link";
 
 const footerGroups = [
   { title: "Tautan Cepat", links: ["Beranda", "Jelajahi", "Warung", "Produk", "Kategori"] },
@@ -18,9 +19,9 @@ export function SiteFooter() {
       <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-x-4 gap-y-6 pb-6 md:grid-cols-3 lg:grid-cols-[minmax(200px,1.4fr)_repeat(3,minmax(120px,1fr))_auto] lg:gap-6">
           <div className="col-span-2 md:col-span-3 lg:col-span-1">
-            <a
+            <Link
               className="inline-flex items-center gap-2 text-base font-bold tracking-[-0.6px] text-[#233e62]"
-              href="#"
+              href="/"
               aria-label="Warungku — Beranda"
             >
               <span className="relative grid size-8 place-items-center text-primary">
@@ -28,7 +29,7 @@ export function SiteFooter() {
                 <span className="absolute top-[9px] text-[11px] font-bold text-white">W</span>
               </span>
               <span>Warungku</span>
-            </a>
+            </Link>
             <p className="mt-2 max-w-xs text-xs leading-[1.7] text-[#7387a3]">
               Temukan berbagai toko dan produk dari pelaku UMKM di sekitarmu. Dari makanan, minuman, hingga kebutuhan sehari-hari.
             </p>
@@ -41,7 +42,13 @@ export function SiteFooter() {
               {group.links.map((link) => (
                 <a
                   className="py-0.5 text-xs text-[#7185a0] transition-colors hover:text-primary"
-                  href="#"
+                  href={
+                    link === "Cerita Warungku"
+                      ? "/tentang"
+                      : link === "Pusat Bantuan"
+                        ? "/bantuan"
+                        : "#"
+                  }
                   key={link}
                 >
                   {link}
