@@ -61,13 +61,13 @@ export function SiteHeader() {
             );
           })}
         </nav>
-        <a
+        <Link
           className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#eef6ff] px-3 py-2 text-xs font-medium text-primary sm:text-sm transition-colors hover:bg-secondary sm:ml-0"
-          href="#"
+          href="/login"
         >
           <Icon name="user" size={15} />
           <span className="min-[400px]:hidden">Masuk</span><span className="hidden min-[400px]:inline">Login / Daftar</span>
-        </a>
+        </Link>
       </div>
     </header>
   );
