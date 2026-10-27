@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
-import { SiteHeader } from "@/components/layout/site-header";
-import { SiteFooter } from "@/components/layout/site-footer";
+import { SiteChrome } from "@/components/layout/site-chrome";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -20,9 +20,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="id" className={`${poppins.variable} h-full`}>
       <body className="min-h-full bg-background font-sans text-sm text-foreground antialiased">
-        <SiteHeader />
-        {children}
-        <SiteFooter />
+        <Suspense fallback={children}>
+          <SiteChrome>{children}</SiteChrome>
+        </Suspense>
       </body>
     </html>
   );
