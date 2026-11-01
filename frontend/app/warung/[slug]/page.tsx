@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { WarungDetailPage } from "@/components/view/warung-detail-page";
-import { getStoreBySlug, slugify, stores } from "@/lib/home-data";
+import { seedStores } from "@/lib/seed-data";
 
 export function generateStaticParams() {
-  return stores.map((store) => ({ slug: slugify(store.name) }));
+  return seedStores.map((store) => ({ slug: store.slug }));
+}
+
+function getPublicStore(slug: string) {
+  const store = seedStores.find((s) => s.slug === slug);
+  // Draft tidak boleh bocor — perlakukan sama dengan tak ada (P04).
+  return store && store.status === "published" ? store : null;
 }
 
 export async function generateMetadata({
@@ -12,9 +18,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const store = getStoreBySlug((await params).slug);
+  const store = getPublicStore((await params).slug);
   return store
-    ? { title: `${store.name} — Warungku`, description: store.tagline }
+    ? { title: `${store.name} — Warungku`, description: store.description }
     : {};
 }
 
@@ -23,7 +29,7 @@ export default async function Page({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const store = getStoreBySlug((await params).slug);
+  const store = getPublicStore((await params).slug);
   if (!store) notFound();
   return <WarungDetailPage store={store} />;
 }

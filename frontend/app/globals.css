@@ -1,8 +1,42 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens WarungKu (Fase 1 — mock data).
+ * Brand tetap: primary #227BF3 + font Poppins (sesuai keputusan proyek).
+ * Token semantik & netral mengikuti docs/frontend/02-design-system.md.
+ */
+
+@theme {
+  /* Netral (stone) — docs 02 §2.2 */
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f5f5f4;
+  --color-border: #e7e5e4;
+  --color-border-strong: #d6d3d1;
+  --color-text: #1c1917;
+  --color-text-muted: #57534e;
+  --color-text-subtle: #78716c;
+
+  /* Semantik — docs 02 §2.3 */
+  --color-success: #15803d;
+  --color-success-subtle: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-subtle: #fef3c7;
+  --color-danger: #b91c1c;
+  --color-danger-subtle: #fee2e2;
+  --color-info: #1d4ed8;
+  --color-info-subtle: #dbeafe;
+
+  /* WhatsApp — docs 02 §2.1 */
+  --color-whatsapp: #15803d;
+  --color-whatsapp-hover: #166534;
+  --color-whatsapp-subtle: #dcfce7;
+}
+
 @theme inline {
-  --color-background: #ffffff;
-  --color-foreground: #263e60;
+  /* Brand terpasang: Poppins + #227BF3 (keputusan proyek). */
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-text);
   --color-primary: #227bf3;
   --color-secondary: #dbedff;
   --font-sans: var(--font-poppins);

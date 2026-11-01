@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { WarungDetailPage } from "@/components/view/warung-detail-page";
-import { getStoreBySlug, slugify, stores } from "@/lib/home-data";
+import { seedStores } from "@/lib/seed-data";
 
 export function generateStaticParams() {
-  return stores.map((store) => ({ slug: slugify(store.name) }));
+  return seedStores.map((store) => ({ slug: store.slug }));
+}
+
+function getStore(slug: string) {
+  return seedStores.find((s) => s.slug === slug) ?? null;
 }
 
 export async function generateMetadata({
@@ -13,7 +17,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const store = getStoreBySlug((await params).slug);
+  const store = getStore((await params).slug);
   return store ? { title: `Preview ${store.name} — Warungku` } : {};
 }
 
@@ -22,7 +26,7 @@ export default async function MitraStorePreview({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const store = getStoreBySlug((await params).slug);
+  const store = getStore((await params).slug);
   if (!store) notFound();
 
   return (
@@ -34,7 +38,7 @@ export default async function MitraStorePreview({
         </div>
         <Link
           className="shrink-0 rounded-lg border border-[#dce5f0] px-3 py-2 text-xs font-medium text-[#5f7189] transition hover:border-primary hover:text-primary"
-          href={`/warung/${slugify(store.name)}`}
+          href={`/warung/${store.slug}`}
         >
           Lihat halaman publik
         </Link>

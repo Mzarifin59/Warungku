@@ -1,7 +1,10 @@
 import { StoreCard } from "@/components/store-card";
-import { benefits, categories, products, stores } from "@/lib/home-data";
+import { benefits, categories, stores } from "@/lib/home-data";
 import { Icon } from "@/components/icon";
 import { BenefitsIllustration } from "@/components/benefits-illustration";
+
+// ProductSection sudah dipisah ke client component (pakai useRouter).
+export { ProductSection } from "@/components/product-section";
 
 function SectionHeading({
   title,
@@ -79,61 +82,6 @@ export function StoreSection() {
       <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {stores.map((store) => (
           <StoreCard key={store.name} store={store} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function ProductSection() {
-  return (
-    <section className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
-      <SectionHeading
-        title="Produk Terlaris"
-        subtitle="Pilihan produk favorit dari berbagai toko UMKM"
-      />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-6">
-        {products.map((product) => (
-          <article
-            className="min-w-0 overflow-hidden rounded-[15px] border border-[#d9eaff] bg-white p-1.5 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10"
-            key={product.name}
-          >
-            <a
-              className="block aspect-[1.2] rounded-[10px] bg-[#e7edf4] bg-cover bg-center"
-              href="#"
-              style={{ backgroundImage: `url("${product.image}")` }}
-              role="img"
-              aria-label={product.name}
-            />
-            <div className="px-px pt-2 pb-px">
-              <a
-                className="block truncate text-xs font-semibold text-[#2c4669] sm:text-sm"
-                href="#"
-              >
-                {product.name}
-              </a>
-              <span className="mt-0.5 block truncate text-xs text-[#506681] sm:text-sm">
-                {product.price}
-              </span>
-              <div className="mt-2 flex items-center gap-1.5 text-[10px] text-[#8292aa] sm:text-[11px]">
-                <span
-                  className="grid size-6 shrink-0 place-items-center rounded-full border border-[#f1e5d9] text-[8px] font-bold text-white"
-                  style={{ backgroundColor: product.logoColor }}
-                  aria-hidden="true"
-                >
-                  {product.logo}
-                </span>
-                <span className="truncate">{product.store}</span>
-                <button
-                  className="ml-auto grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-[#2873c9] transition hover:scale-105 hover:bg-[#c1ddff]"
-                  type="button"
-                  aria-label={`Tambah ${product.name} ke keranjang`}
-                >
-                  <Icon name="plus" size={15} />
-                </button>
-              </div>
-            </div>
-          </article>
         ))}
       </div>
     </section>

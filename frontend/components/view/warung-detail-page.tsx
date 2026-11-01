@@ -1,39 +1,158 @@
+"use client";
+
+import * as React from "react";
+import { MessageCircle, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/icon";
-import { products, type Store } from "@/lib/home-data";
+import { CartSheet } from "@/components/view/cart-sheet";
+import { CheckoutSheet } from "@/components/view/checkout-sheet";
+import { CartProvider, useCart } from "@/lib/cart-store";
+import { stores as homeStores, products as homeProducts, slugify } from "@/lib/home-data";
+import { formatRupiah } from "@/lib/utils";
+import type { Store } from "@/lib/types";
+
+type Panel = "checkout" | null;
 
 export function WarungDetailPage({ store }: { store: Store }) {
-  const storeProducts = products.filter((product) => product.store === store.name);
+  return (
+    <CartProvider slug={store.slug}>
+      <DetailPageInner typedStore={store} />
+    </CartProvider>
+  );
+}
 
-  const stats: { icon: IconName; label: string; value: string; note?: string; tint: string }[] = [
-    {
-      icon: "star",
-      label: "Rating Warung",
-      value: store.rating,
-      note: `(${store.reviews} Ulasan)`,
-      tint: "bg-amber-100 text-amber-500",
-    },
-    {
-      icon: "basket",
-      label: "Produk Terjual",
-      value: `${store.sold} Item`,
-      tint: "bg-secondary text-primary",
-    },
-    {
-      icon: "clock",
-      label: "Jam Operasional",
-      value: store.hours,
-      tint: "bg-emerald-100 text-emerald-600",
-    },
-    {
-      icon: "pin",
-      label: "Lokasi",
-      value: store.location,
-      tint: "bg-rose-100 text-rose-500",
-    },
-  ];
+function DetailPageInner({ typedStore }: { typedStore: Store }) {
+  const cart = useCart();
+  const [panel, setPanel] = React.useState<Panel>(null);
+  const [openCart, setOpenCart] = React.useState(false);
+
+  // Layout lama (stats + tagline + grid produk flat) dari home-data.
+  const homeStore = homeStores.find((s) => s.name === typedStore.name);
+
+  // Produk untuk display: pakai flat home-data bila ada match, selain itu
+  // jatuh ke seed-data (produk yang benar-benar ada di seed store ini).
+  const displayProducts: {
+    name: string;
+    price: string;
+    image: string;
+    logo: string;
+    logoColor: string;
+    /** Seed product id — dipakai untuk menambah ke cart (Fase 1). */
+    seedId?: string;
+    /** false bila produk seed sudah habis (tombol jadi disabled). */
+    available?: boolean;
+  }[] = homeStore
+    ? homeProducts
+        .filter((p) => p.store === homeStore.name)
+        .map((p) => {
+          const seedProduct = typedStore.products.find(
+            (sp) => sp.name.toLowerCase() === p.name.toLowerCase(),
+          );
+          return {
+            name: p.name,
+            price: p.price,
+            image: p.image,
+            logo: p.logo,
+            logoColor: p.logoColor,
+            seedId: seedProduct?.id,
+            available: seedProduct ? seedProduct.available : undefined,
+          };
+        })
+    : typedStore.products.map((p) => ({
+        name: p.name,
+        price: formatRupiah(p.price),
+        image: p.image,
+        logo: typedStore.name
+          .split(" ")
+          .slice(0, 2)
+          .map((w) => w.charAt(0).toUpperCase())
+          .join(""),
+        logoColor: "#227bf3",
+        seedId: p.id,
+        available: p.available,
+      }));
+
+  const stats: {
+    icon: IconName;
+    label: string;
+    value: string;
+    note?: string;
+    tint: string;
+  }[] = homeStore
+    ? [
+        {
+          icon: "star",
+          label: "Rating Warung",
+          value: homeStore.rating,
+          note: `(${homeStore.reviews} Ulasan)`,
+          tint: "bg-amber-100 text-amber-500",
+        },
+        {
+          icon: "basket",
+          label: "Produk Terjual",
+          value: `${homeStore.sold} Item`,
+          tint: "bg-secondary text-primary",
+        },
+        {
+          icon: "clock",
+          label: "Jam Operasional",
+          value: homeStore.hours,
+          tint: "bg-emerald-100 text-emerald-600",
+        },
+        {
+          icon: "pin",
+          label: "Lokasi",
+          value: homeStore.location,
+          tint: "bg-rose-100 text-rose-500",
+        },
+      ]
+    : [
+        {
+          icon: "basket",
+          label: "Produk",
+          value: `${typedStore.products.length} item`,
+          tint: "bg-secondary text-primary",
+        },
+      ];
+
+  function handleQuickAdd(product: (typeof displayProducts)[number]) {
+    // Bila produk ada di seed store & tersedia, pakai cart.add (sinkron
+    // dengan seed).
+    if (product.seedId && typedStore.products.some((p) => p.id === product.seedId && p.available)) {
+      const seedProduct = typedStore.products.find((p) => p.id === product.seedId)!;
+      cart.add(seedProduct, 1);
+      setOpenCart(true);
+      return;
+    }
+    // Bila produk hanya ada di home-data flat (tidak di seed), tambah raw
+    // ke cart slug. ID-nya di-prefix `home-` agar tak bentrok dengan
+    // seed id, dan tersedia untuk checkout (produk home tidak ada di
+    // checkAvailability jadi dianggap safe).
+    cart.addRaw({
+      productId: `home-${slugify(product.name)}`,
+      name: product.name,
+      unitPrice: parseInt(product.price.replace(/\D/g, ""), 10) || 0,
+      quantity: 1,
+      image: product.image,
+    });
+    setOpenCart(true);
+  }
+
+  function openCartSheet() {
+    setOpenCart(true);
+  }
+
+  function openCheckout() {
+    if (cart.count === 0) {
+      setOpenCart(true);
+      return;
+    }
+    setPanel("checkout");
+  }
 
   return (
     <main className="bg-[#f3f8ff] pt-6 pb-12 sm:pt-8">
+      {/* Header toko lama */}
       <section
         className="container mx-auto px-4 sm:px-6 lg:px-8"
         aria-labelledby="warung-title"
@@ -41,47 +160,58 @@ export function WarungDetailPage({ store }: { store: Store }) {
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-blue-900/5">
           <div
             className="h-32 bg-[#e8eff7] bg-cover bg-center sm:h-40 lg:h-48"
-            style={{ backgroundImage: `url("${store.image}")` }}
+            style={
+              homeStore
+                ? { backgroundImage: `url("${homeStore.image}")` }
+                : undefined
+            }
             role="img"
-            aria-label={`Sampul ${store.name}`}
+            aria-label={`Sampul ${typedStore.name}`}
           />
           <div className="px-4 pb-5 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <span
                 className="-mt-10 grid size-20 shrink-0 place-items-center rounded-full border-4 border-white text-xl font-bold text-white shadow-sm sm:-mt-12 sm:size-24 sm:text-2xl"
-                style={{ backgroundColor: store.logoColor }}
+                style={{
+                  backgroundColor: homeStore?.logoColor ?? "#227bf3",
+                }}
                 aria-hidden="true"
               >
-                {store.logo}
+                {homeStore?.logo ??
+                  typedStore.name
+                    .split(" ")
+                    .slice(0, 2)
+                    .map((w) => w.charAt(0).toUpperCase())
+                    .join("")}
               </span>
               <div className="min-w-0 flex-1 sm:pb-1">
                 <h1
                   className="truncate text-lg font-bold text-[#233e62] sm:text-xl"
                   id="warung-title"
                 >
-                  {store.name}
+                  {typedStore.name}
                 </h1>
-                <p className="text-sm text-[#6f82a1]">{store.tagline}</p>
+                <p className="text-sm text-[#6f82a1]">
+                  {homeStore?.tagline ?? typedStore.description}
+                </p>
               </div>
               <div className="flex items-center gap-2 sm:pb-1">
+                <Button variant="whatsapp" size="sm" onClick={openCheckout} className="flex">
+                  <MessageCircle size={15} /> Pesan
+                </Button>
                 <button
-                  className="h-9 rounded-lg bg-primary px-5 text-sm font-medium text-white transition hover:bg-blue-600"
                   type="button"
+                  onClick={openCartSheet}
+                  className="relative inline-flex h-9 items-center gap-1 rounded-lg border border-primary/40 bg-secondary px-3 text-sm font-medium text-primary transition hover:bg-[#c1ddff]"
+                  aria-label="Buka keranjang"
                 >
-                  Ikuti+
-                </button>
-                <button
-                  className="h-9 rounded-lg border border-primary/40 bg-secondary px-5 text-sm font-medium text-primary transition hover:bg-[#c1ddff]"
-                  type="button"
-                >
-                  Chat
-                </button>
-                <button
-                  className="grid size-9 place-items-center rounded-lg border border-slate-300 text-slate-500 transition hover:border-primary hover:text-primary"
-                  type="button"
-                  aria-label={`Bagikan ${store.name}`}
-                >
-                  <Icon name="share" size={16} />
+                  <Icon name="bag" size={15} />
+                  <span className="sr-only">Keranjang</span>
+                  {cart.count > 0 && (
+                    <span className="grid min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+                      {cart.count}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -96,13 +226,17 @@ export function WarungDetailPage({ store }: { store: Store }) {
                     className={`grid size-10 shrink-0 place-items-center rounded-lg ${stat.tint}`}
                   >
                     <Icon
-                      className={stat.icon === "star" ? "fill-current" : undefined}
+                      className={
+                        stat.icon === "star" ? "fill-current" : undefined
+                      }
                       name={stat.icon}
                       size={20}
                     />
                   </span>
                   <span className="min-w-0">
-                    <small className="block text-[11px] text-[#7185a0]">{stat.label}</small>
+                    <small className="block text-[11px] text-[#7185a0]">
+                      {stat.label}
+                    </small>
                     <strong className="block truncate text-sm font-semibold text-[#2e496c]">
                       {stat.value}
                       {stat.note && (
@@ -119,6 +253,7 @@ export function WarungDetailPage({ store }: { store: Store }) {
         </div>
       </section>
 
+      {/* Grid produk lama + tambah */}
       <section
         className="container mx-auto mt-10 px-4 sm:mt-14 sm:px-6 lg:px-8"
         aria-labelledby="products-title"
@@ -126,19 +261,19 @@ export function WarungDetailPage({ store }: { store: Store }) {
         <h2 className="mb-4 text-base font-bold text-[#2b4568] sm:text-xl" id="products-title">
           Semua Produk{" "}
           <span className="text-xs font-semibold text-[#6f82a1]">
-            ({storeProducts.length} produk)
+            ({displayProducts.length} produk)
           </span>
         </h2>
-        {storeProducts.length === 0 ? (
+        {displayProducts.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-[#bcd6f5] bg-white/60 px-4 py-10 text-center text-sm text-[#7185a0]">
             Warung ini belum memiliki produk.
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-5">
-            {storeProducts.map((product) => (
-              <article
-                className="min-w-0 overflow-hidden rounded-2xl border border-[#d9eaff] bg-white p-2 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10"
+            {displayProducts.map((product) => (
+              <div
                 key={product.name}
+                className="relative min-w-0 overflow-hidden rounded-2xl border border-[#d9eaff] bg-white p-2 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10"
               >
                 <div
                   className="aspect-[1.2] rounded-xl bg-[#e7edf4] bg-cover bg-center"
@@ -146,28 +281,56 @@ export function WarungDetailPage({ store }: { store: Store }) {
                   role="img"
                   aria-label={product.name}
                 />
-                <div className="flex items-end justify-between gap-2 px-1 pt-2 pb-1">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-xs font-semibold text-[#2c4669] sm:text-sm">
-                      {product.name}
-                    </h3>
-                    <span className="block truncate text-xs text-[#506681] sm:text-sm">
-                      {product.price}
-                    </span>
-                  </div>
+                <div className="px-1 pt-2 pb-1">
+                  <h3 className="truncate text-xs font-semibold text-[#2c4669] sm:text-sm">
+                    {product.name}
+                  </h3>
+                  <span className="block truncate text-xs text-[#506681] sm:text-sm">
+                    {product.price}
+                  </span>
                   <button
-                    className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-[#2873c9] transition hover:scale-105 hover:bg-[#c1ddff]"
                     type="button"
+                    onClick={() => handleQuickAdd(product)}
+                    disabled={product.available === false}
+                    className={
+                      "mt-2 flex h-9 w-full items-center justify-center gap-1 rounded-lg text-xs font-semibold transition " +
+                      (product.available === false
+                        ? "cursor-not-allowed bg-surface-muted text-text-subtle"
+                        : "bg-primary text-white hover:bg-primary/90")
+                    }
                     aria-label={`Tambah ${product.name} ke keranjang`}
                   >
-                    <Icon name="plus" size={15} />
+                    <Plus size={14} />
+                    {product.available === false ? "Habis" : "Tambah"}
                   </button>
                 </div>
-              </article>
+              </div>
             ))}
           </div>
         )}
       </section>
+
+      {/* Sheet keranjang (P02) */}
+      {openCart && (
+        <CartSheet
+          open={openCart}
+          onClose={() => setOpenCart(false)}
+          onCheckout={openCheckout}
+        />
+      )}
+
+      {/* Checkout + WA (P03) */}
+      {panel === "checkout" && (
+        <CheckoutSheet
+          open
+          store={typedStore}
+          onClose={() => setPanel(null)}
+          onBackToCart={() => {
+            setPanel(null);
+            setOpenCart(true);
+          }}
+        />
+      )}
     </main>
   );
 }
