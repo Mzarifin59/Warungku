@@ -1,44 +1,69 @@
 /**
- * Product repository — FASE 1 (mock).
+ * Product repository — FASE 2 (Supabase).
  *
- * // TODO(api): ganti isi repos dengan panggilan Supabase di Fase 2;
- * seed ini cukup untuk demo & sstatis pages.
+ * Query tabel `public.products`.
  */
 
-import { seedStores } from "../seed-data";
+import { createClient } from "@/lib/supabase/client";
 import type { Product } from "../types";
 
-const MOCK_LATENCY_MS = 300;
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+function mapProduct(row: {
+  id: string;
+  store_id: string;
+  name: string;
+  price: number;
+  category_id: string | null;
+  description: string | null;
+  image_url: string | null;
+  available: boolean;
+  sort_order: number;
+}): Product {
+  return {
+    id: row.id,
+    storeId: row.store_id,
+    name: row.name,
+    price: row.price,
+    categoryId: row.category_id,
+    description: row.description ?? undefined,
+    image: row.image_url ?? "",
+    available: row.available,
+    sortOrder: row.sort_order,
+  };
 }
 
-/** Semua produk milik satu toko (untuk katalog publik P01). */
-export async function listProductsByStore(storeId: string): Promise<Product[]> {
-  // TODO(api): productRepo.listByStore(storeId)
-  await delay(MOCK_LATENCY_MS);
-  const store = seedStores.find((s) => s.id === storeId);
-  if (!store) return [];
-  return [...store.products].sort(
-    (a, b) => a.sortOrder - b.sortOrder || b.id.localeCompare(a.id),
-  );
+export async function listProductsByStore(
+  storeId: string,
+): Promise<Product[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select(
+      "id, store_id, name, price, category_id, description, image_url, available, sort_order",
+    )
+    .eq("store_id", storeId)
+    .order("sort_order");
+  if (error) return [];
+  return (data ?? []).map(mapProduct);
 }
 
-/** Cek ketersediaan massal (checkout P03 → F5 konflik item). */
 export async function checkAvailability(
   storeId: string,
   items: { productId: string }[],
 ): Promise<Map<string, boolean>> {
-  // TODO(api): productRepo.checkAvailability(storeId, ids)
-  await delay(250);
-  const store = seedStores.find((s) => s.id === storeId);
-  const products = new Map(store?.products.map((p) => [p.id, p]) ?? []);
+  if (items.length === 0) return new Map();
+
+  const ids = items.map((i) => i.productId);
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("products")
+    .select("id, available")
+    .eq("store_id", storeId)
+    .in("id", ids);
+
   const result = new Map<string, boolean>();
+  const found = new Map((data ?? []).map((p) => [p.id, p.available]));
   for (const { productId } of items) {
-    const product = products.get(productId);
-    // "missing" = produk sudah dihapus → dianggap tak tersedia.
-    result.set(productId, product ? product.available : false);
+    result.set(productId, found.get(productId) ?? false);
   }
   return result;
 }

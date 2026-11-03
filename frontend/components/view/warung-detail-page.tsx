@@ -7,7 +7,6 @@ import { Icon, type IconName } from "@/components/icon";
 import { CartSheet } from "@/components/view/cart-sheet";
 import { CheckoutSheet } from "@/components/view/checkout-sheet";
 import { CartProvider, useCart } from "@/lib/cart-store";
-import { stores as homeStores, products as homeProducts, slugify } from "@/lib/home-data";
 import { formatRupiah } from "@/lib/utils";
 import type { Store } from "@/lib/types";
 
@@ -26,51 +25,31 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
   const [panel, setPanel] = React.useState<Panel>(null);
   const [openCart, setOpenCart] = React.useState(false);
 
-  // Layout lama (stats + tagline + grid produk flat) dari home-data.
-  const homeStore = homeStores.find((s) => s.name === typedStore.name);
-
-  // Produk untuk display: pakai flat home-data bila ada match, selain itu
-  // jatuh ke seed-data (produk yang benar-benar ada di seed store ini).
   const displayProducts: {
     name: string;
     price: string;
     image: string;
     logo: string;
     logoColor: string;
-    /** Seed product id — dipakai untuk menambah ke cart (Fase 1). */
+    /** Id seed — dipakai untuk menambah ke cart. */
     seedId?: string;
-    /** false bila produk seed sudah habis (tombol jadi disabled). */
+    /** false bila produk seed sudah habis. */
     available?: boolean;
-  }[] = homeStore
-    ? homeProducts
-        .filter((p) => p.store === homeStore.name)
-        .map((p) => {
-          const seedProduct = typedStore.products.find(
-            (sp) => sp.name.toLowerCase() === p.name.toLowerCase(),
-          );
-          return {
-            name: p.name,
-            price: p.price,
-            image: p.image,
-            logo: p.logo,
-            logoColor: p.logoColor,
-            seedId: seedProduct?.id,
-            available: seedProduct ? seedProduct.available : undefined,
-          };
-        })
-    : typedStore.products.map((p) => ({
-        name: p.name,
-        price: formatRupiah(p.price),
-        image: p.image,
-        logo: typedStore.name
-          .split(" ")
-          .slice(0, 2)
-          .map((w) => w.charAt(0).toUpperCase())
-          .join(""),
-        logoColor: "#227bf3",
-        seedId: p.id,
-        available: p.available,
-      }));
+  }[] = typedStore.products.map((p) => ({
+    name: p.name,
+    price: formatRupiah(p.price),
+    image:
+      p.image ||
+      `https://images.unsplash.com/photo-1504674900247-w088a7400f4d?auto=format&fit=crop&w=480&q=85`,
+    logo: typedStore.name
+      .split(" ")
+      .slice(0, 2)
+      .map((w) => w.charAt(0).toUpperCase())
+      .join(""),
+    logoColor: "#227bf3",
+    seedId: p.id,
+    available: p.available,
+  }));
 
   const stats: {
     icon: IconName;
@@ -78,58 +57,28 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
     value: string;
     note?: string;
     tint: string;
-  }[] = homeStore
-    ? [
-        {
-          icon: "star",
-          label: "Rating Warung",
-          value: homeStore.rating,
-          note: `(${homeStore.reviews} Ulasan)`,
-          tint: "bg-amber-100 text-amber-500",
-        },
-        {
-          icon: "basket",
-          label: "Produk Terjual",
-          value: `${homeStore.sold} Item`,
-          tint: "bg-secondary text-primary",
-        },
-        {
-          icon: "clock",
-          label: "Jam Operasional",
-          value: homeStore.hours,
-          tint: "bg-emerald-100 text-emerald-600",
-        },
-        {
-          icon: "pin",
-          label: "Lokasi",
-          value: homeStore.location,
-          tint: "bg-rose-100 text-rose-500",
-        },
-      ]
-    : [
-        {
-          icon: "basket",
-          label: "Produk",
-          value: `${typedStore.products.length} item`,
-          tint: "bg-secondary text-primary",
-        },
-      ];
+  }[] = [
+    {
+      icon: "basket",
+      label: "Produk",
+      value: `${typedStore.products.length} item`,
+      tint: "bg-secondary text-primary",
+    },
+  ];
 
   function handleQuickAdd(product: (typeof displayProducts)[number]) {
-    // Bila produk ada di seed store & tersedia, pakai cart.add (sinkron
-    // dengan seed).
-    if (product.seedId && typedStore.products.some((p) => p.id === product.seedId && p.available)) {
-      const seedProduct = typedStore.products.find((p) => p.id === product.seedId)!;
-      cart.add(seedProduct, 1);
-      setOpenCart(true);
-      return;
+    if (product.seedId) {
+      const seedProduct = typedStore.products.find(
+        (p) => p.id === product.seedId,
+      );
+      if (seedProduct) {
+        cart.add(seedProduct, 1);
+        setOpenCart(true);
+        return;
+      }
     }
-    // Bila produk hanya ada di home-data flat (tidak di seed), tambah raw
-    // ke cart slug. ID-nya di-prefix `home-` agar tak bentrok dengan
-    // seed id, dan tersedia untuk checkout (produk home tidak ada di
-    // checkAvailability jadi dianggap safe).
     cart.addRaw({
-      productId: `home-${slugify(product.name)}`,
+      productId: product.seedId ?? `home-${product.name}`,
       name: product.name,
       unitPrice: parseInt(product.price.replace(/\D/g, ""), 10) || 0,
       quantity: 1,
@@ -152,7 +101,7 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
 
   return (
     <main className="bg-[#f3f8ff] pt-6 pb-12 sm:pt-8">
-      {/* Header toko lama */}
+      {/* Header toko */}
       <section
         className="container mx-auto px-4 sm:px-6 lg:px-8"
         aria-labelledby="warung-title"
@@ -160,11 +109,6 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-blue-900/5">
           <div
             className="h-32 bg-[#e8eff7] bg-cover bg-center sm:h-40 lg:h-48"
-            style={
-              homeStore
-                ? { backgroundImage: `url("${homeStore.image}")` }
-                : undefined
-            }
             role="img"
             aria-label={`Sampul ${typedStore.name}`}
           />
@@ -172,17 +116,14 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <span
                 className="-mt-10 grid size-20 shrink-0 place-items-center rounded-full border-4 border-white text-xl font-bold text-white shadow-sm sm:-mt-12 sm:size-24 sm:text-2xl"
-                style={{
-                  backgroundColor: homeStore?.logoColor ?? "#227bf3",
-                }}
+                style={{ backgroundColor: "#227bf3" }}
                 aria-hidden="true"
               >
-                {homeStore?.logo ??
-                  typedStore.name
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((w) => w.charAt(0).toUpperCase())
-                    .join("")}
+                {typedStore.name
+                  .split(" ")
+                  .slice(0, 2)
+                  .map((w) => w.charAt(0).toUpperCase())
+                  .join("")}
               </span>
               <div className="min-w-0 flex-1 sm:pb-1">
                 <h1
@@ -192,11 +133,16 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
                   {typedStore.name}
                 </h1>
                 <p className="text-sm text-[#6f82a1]">
-                  {homeStore?.tagline ?? typedStore.description}
+                  {typedStore.description}
                 </p>
               </div>
               <div className="flex items-center gap-2 sm:pb-1">
-                <Button variant="whatsapp" size="sm" onClick={openCheckout} className="flex">
+                <Button
+                  variant="whatsapp"
+                  size="sm"
+                  onClick={openCheckout}
+                  className="flex"
+                >
                   <MessageCircle size={15} /> Pesan
                 </Button>
                 <button
@@ -253,12 +199,15 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
         </div>
       </section>
 
-      {/* Grid produk lama + tambah */}
+      {/* Grid produk */}
       <section
         className="container mx-auto mt-10 px-4 sm:mt-14 sm:px-6 lg:px-8"
         aria-labelledby="products-title"
       >
-        <h2 className="mb-4 text-base font-bold text-[#2b4568] sm:text-xl" id="products-title">
+        <h2
+          className="mb-4 text-base font-bold text-[#2b4568] sm:text-xl"
+          id="products-title"
+        >
           Semua Produk{" "}
           <span className="text-xs font-semibold text-[#6f82a1]">
             ({displayProducts.length} produk)
@@ -272,7 +221,7 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-5">
             {displayProducts.map((product) => (
               <div
-                key={product.name}
+                key={product.seedId ?? product.name}
                 className="relative min-w-0 overflow-hidden rounded-2xl border border-[#d9eaff] bg-white p-2 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10"
               >
                 <div

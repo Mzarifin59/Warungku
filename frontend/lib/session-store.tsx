@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { fetchStoreForUser } from "@/lib/supabase/store-lookup";
 import type { Session } from "./types";
 import {
-  DEMO_NO_STORE_SESSION,
-  DEMO_OWNER_SESSION,
   login as repoLogin,
   register as repoRegister,
   type LoginInput,
@@ -13,48 +13,37 @@ import {
 } from "./repos/auth-repo";
 
 /**
- * Session store — FASE 1 (mock, client-side).
+ * Session store — FASE 2 (Supabase).
  *
- * // TODO(api): ganti dengan Supabase Auth di Fase 2; mock ini cukup
- * untuk demo alur onboarding (docs 04 F1 & F7).
- *
- * Simpan di `localStorage` sehingga bertahan setelah refresh.
+ * State session disimpan via `@supabase/ssr` (cookie) — bukan localStorage.
+ * Di client: `createClient()` dari `@supabase/ssr` otomatis membaca cookie
+ * yang di-set oleh middleware / server component.
  */
 
-const SESSION_KEY = "warungku.session";
-
-function readSession(): Session | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as Session;
-  } catch {
-    return null;
-  }
-}
-
-function writeSession(session: Session | null) {
-  if (typeof window === "undefined") return;
-  try {
-    if (session) {
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    } else {
-      window.localStorage.removeItem(SESSION_KEY);
-    }
-  } catch {
-    // mode privat — state tetap di memori.
-  }
+function toSession(
+  user: {
+    id: string;
+    email?: string;
+    user_metadata?: Record<string, unknown>;
+  } | null,
+  storeId: string | null,
+): Session | null {
+  if (!user) return null;
+  const name =
+    (user.user_metadata?.name as string | undefined) ?? user.email ?? "";
+  return {
+    user: { id: user.id, name, email: user.email ?? "" },
+    storeId,
+  };
 }
 
 interface SessionContextValue {
   session: Session | null;
   isAuthenticated: boolean;
+  initializing: boolean;
   signIn: (input: LoginInput) => Promise<Session>;
   signUp: (input: RegisterInput) => Promise<Session>;
   signOut: () => void;
-  signInAsDemoOwner: () => void;
-  signInAsNoStore: () => void;
   resetSession: () => void;
 }
 
@@ -62,20 +51,59 @@ const SessionContext = React.createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [session, setSession] = React.useState<Session | null>(() =>
-    readSession(),
-  );
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [initializing, setInitializing] = React.useState(true);
 
   React.useEffect(() => {
-    writeSession(session);
-  }, [session]);
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function init() {
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) return;
+      const user = data.session?.user ?? null;
+      let storeId: string | null = null;
+      if (user) {
+        storeId = await fetchStoreForUser(user.id);
+      }
+      if (cancelled) return;
+      setSession(toSession(user, storeId));
+      setInitializing(false);
+    }
+
+    init();
+
+    const { data: subData } = supabase.auth.onAuthStateChange(
+      async (event, sessionData) => {
+        if (cancelled) return;
+        const user = sessionData?.user ?? null;
+        let storeId: string | null = null;
+        if (user) {
+          storeId = await fetchStoreForUser(user.id);
+        }
+        if (cancelled) return;
+        setSession(toSession(user, storeId));
+        if (event === "SIGNED_OUT") {
+          router.replace("/");
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      subData.subscription.unsubscribe();
+    };
+  }, [router]);
 
   const value = React.useMemo<SessionContextValue>(
     () => ({
       session,
       isAuthenticated: Boolean(session),
+      initializing,
       async signIn(input) {
         const s = await repoLogin(input);
+        // Supabase sudah set cookie via auth.signInWithPassword;
+        // cukup sinkron state.
         setSession(s);
         router.push("/mitra/dashboard");
         return s;
@@ -86,28 +114,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         router.push("/mitra/dashboard");
         return s;
       },
-      signOut() {
+      async signOut() {
+        const supabase = createClient();
+        await supabase.auth.signOut();
         setSession(null);
         router.push("/");
       },
-      signInAsDemoOwner() {
-        setSession(DEMO_OWNER_SESSION);
-        router.push("/mitra/dashboard");
-      },
-      signInAsNoStore() {
-        setSession(DEMO_NO_STORE_SESSION);
-        router.push("/mitra/dashboard");
-      },
       resetSession() {
         setSession(null);
-        writeSession(null);
       },
     }),
-    [session, router],
+    [session, initializing, router],
   );
 
   return (
-    <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+    <SessionContext.Provider value={value}>
+      {children}
+    </SessionContext.Provider>
   );
 }
 

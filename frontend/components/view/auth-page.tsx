@@ -193,7 +193,7 @@ export function AuthPage({ mode }: AuthPageProps) {
             {isLogin && (
               <div className="flex items-center justify-between gap-3 text-xs">
                 <span className="text-[#8794a5]">
-                  Contoh: demo@warungku.id / warungku
+                  Demo: demo-dapur@warungku.id / demo1234
                 </span>
                 <Link href="#" className="font-medium text-primary hover:underline">
                   Lupa Kata Sandi?

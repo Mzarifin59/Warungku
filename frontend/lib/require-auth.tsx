@@ -14,7 +14,7 @@ import { useSession } from "./session-store";
  * (dashboard mitra, dst.).
  */
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, initializing } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   // Kunci redirect agar effect ini tidak membuat loop setiap pathname/query
@@ -23,14 +23,15 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (redirectLock.current) return;
+    if (initializing) return;
     if (!isAuthenticated) {
       redirectLock.current = true;
       const next = encodeURIComponent(pathname);
       router.replace("/login?next=" + next);
     }
-  }, [isAuthenticated, pathname, router]);
+  }, [initializing, isAuthenticated, pathname, router]);
 
-  if (!isAuthenticated) {
+  if (initializing || !isAuthenticated) {
     return (
       <div
         className="grid min-h-[60vh] place-items-center px-4"
