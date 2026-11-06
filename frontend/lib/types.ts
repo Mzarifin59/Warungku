@@ -37,6 +37,8 @@ export interface Product {
   available: boolean;
   /** Sort manual di dashboard; urutan sekunder = terbaru. */
   sortOrder: number;
+  /** ISO timestamp perubahan terakhir. */
+  updatedAt?: string;
 }
 
 /** Status terbit toko: "Terbit" (publik) vs "Draft" (privat). */
@@ -61,16 +63,16 @@ export interface Store {
   imageBanner?: string;
   /** Jam operasional, mis. "07:00 - 20:00". */
   operationHours?: string;
+  /** Kota / area warung, mis. "Bandung". */
+  location?: string;
   status: StoreStatus;
   categories: Category[];
   products: Product[];
 }
 
-/** Session pengguna yang sedang login (mock, disimpan client-side). */
+/** Session pengguna yang sedang login (dari Supabase Auth). */
 export interface Session {
   user: User;
-  /** Id toko milik user, atau `null` bila belum punya toko. */
-  storeId: string | null;
 }
 
 export interface User {
@@ -94,10 +96,12 @@ export interface CartItem {
 
 /** Hasil validasi checkout: apa yang masih aman vs apa yang bermasalah. */
 export interface CheckoutPreparation {
-  /** Item yang masih tersedia (boleh dilanjutkan ke WhatsApp). */
+  /** Item yang masih tersedia, dengan nama & harga dari database. */
   safe: CartItem[];
   /** Item bermasalah beserta alasannya. */
   conflicts: { item: CartItem; reason: "sold-out" | "missing" }[];
+  /** Item yang harganya berbeda dari saat dimasukkan ke keranjang. */
+  priceChanges: { item: CartItem; oldPrice: number; newPrice: number }[];
   /** Total estimasi untuk item yang aman (integer Rupiah). */
   safeTotal: number;
 }

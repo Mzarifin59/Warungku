@@ -8,10 +8,8 @@ import type { CartItem, Product } from "./types";
 export type { CartItem };
 
 /**
- * Cart store — Fase 1 (mock, client-side).
+ * Cart store — client-side (localStorage per warung).
  *
- * // TODO(api): di Fase 2 tetap per-user (Supabase Auth + DB), tapi
- * kontrak API di sini (add/setQty/remove/clear/total) tidak berubah.
  *
  * - Tersimpan per slug toko di `localStorage` (keys:
  *   `warungku.cart.{slug}`), bertahan setelah refresh (docs 04 F4).
@@ -27,10 +25,32 @@ function readStorage(key: string): CartItem[] {
     const raw = window.localStorage.getItem(key);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+    return Array.isArray(parsed) ? parsed.flatMap(toCartItem) : [];
   } catch {
     return [];
   }
+}
+
+/**
+ * Validasi satu item dari localStorage (bisa rusak / diubah manual).
+ * Item tidak valid dibuang; jumlah dipaksa ke 1–99. Harga di sini hanya
+ * untuk tampilan — checkout selalu memakai harga dari database.
+ */
+function toCartItem(value: unknown): CartItem[] {
+  if (!value || typeof value !== "object") return [];
+  const v = value as Record<string, unknown>;
+  if (typeof v.productId !== "string" || !v.productId) return [];
+  const price = typeof v.unitPrice === "number" && Number.isFinite(v.unitPrice) ? v.unitPrice : 0;
+  const qty = typeof v.quantity === "number" && Number.isFinite(v.quantity) ? Math.floor(v.quantity) : 1;
+  return [
+    {
+      productId: v.productId,
+      name: typeof v.name === "string" ? v.name.slice(0, 100) : "",
+      unitPrice: Math.max(0, Math.round(price)),
+      quantity: Math.min(CART_QTY_MAX, Math.max(1, qty)),
+      image: typeof v.image === "string" ? v.image : "",
+    },
+  ];
 }
 
 function writeStorage(key: string, items: CartItem[]) {
@@ -40,6 +60,30 @@ function writeStorage(key: string, items: CartItem[]) {
   } catch {
     // mode privat / kuota penuh — abaikan, state tetap di memori.
   }
+}
+
+/**
+ * Tambah 1 item ke keranjang warung `slug` dari luar halaman warung
+ * (mis. kartu produk di beranda / hasil pencarian). Keranjang akan terbaca
+ * saat halaman warung dibuka.
+ */
+export function addToStoredCart(
+  slug: string,
+  item: Omit<CartItem, "quantity">,
+) {
+  const key = STORAGE_PREFIX + slug;
+  const items = readStorage(key);
+  const existing = items.find((i) => i.productId === item.productId);
+  writeStorage(
+    key,
+    existing
+      ? items.map((i) =>
+          i.productId === item.productId
+            ? { ...i, quantity: Math.min(i.quantity + 1, CART_QTY_MAX) }
+            : i,
+        )
+      : [...items, { ...item, quantity: 1 }],
+  );
 }
 
 export interface CartContextValue {
@@ -55,6 +99,8 @@ export interface CartContextValue {
   setQuantity: (productId: string, quantity: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
+  /** Ganti isi keranjang dengan item terverifikasi (nama & harga dari DB). */
+  syncItems: (items: CartItem[]) => void;
 }
 
 const CartContext = React.createContext<CartContextValue | null>(null);
@@ -132,9 +178,10 @@ export function CartProvider({
       remove: (productId) =>
         setItems((prev) => prev.filter((i) => i.productId !== productId)),
       clear: () => setItems([]),
+      syncItems: (next) => setItems(next),
       /**
        * Tambah item mentah langsung (bukan dari `Product` seed). Dipakai
-       * untuk handoff dari home page yang memakai flat `home-data`.
+       * untuk handoff dari kartu produk lintas warung.
        */
       addRaw: (item: CartItem) => {
         setItems((prev) => {

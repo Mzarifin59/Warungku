@@ -184,7 +184,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      is_slug_available: {
+        Args: { p_slug: string; p_exclude?: string | null };
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;

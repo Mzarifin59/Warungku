@@ -243,33 +243,46 @@ Dapatkan dari: Supabase Dashboard > Settings > API
 ### Fase A - Setup (langsung)
 - [x] Buat branch `feat/supabase-backend`
 - [x] Tulis dokumen plan ini
-- [ ] Buat project Supabase di `dashboard.supabase.com`
-- [ ] Jalankan SQL di atas di Supabase SQL Editor
-- [ ] `bun add @supabase/supabase-js @supabase/ssr` di `frontend/`
-- [ ] Buat `frontend/lib/supabase/client.ts` (browser client)
-- [ ] Buat `frontend/lib/supabase/server.ts` (server client + cookies)
-- [ ] Buat `frontend/middleware.ts` untuk refresh token
-- [ ] Tambahkan `.env.local` (jangan commit ke git)
+- [x] Buat project Supabase di `dashboard.supabase.com`
+- [x] Jalankan SQL di atas di Supabase SQL Editor
+- [x] `bun add @supabase/supabase-js @supabase/ssr` di `frontend/`
+- [x] Buat `frontend/lib/supabase/client.ts` (browser client)
+- [x] Buat `frontend/lib/supabase/server.ts` (server client + cookies)
+- [x] Buat `frontend/proxy.ts` untuk refresh token (Next 16: `middleware.ts` → `proxy.ts`)
+- [x] Tambahkan `.env.local` (jangan commit ke git)
 
 ### Fase B - Auth
-- [ ] Update `auth-repo.ts`: login, register pakai Supabase
-- [ ] Update `session-store.tsx` untuk Supabase session
+- [x] Update `auth-repo.ts`: login, register pakai Supabase
+- [x] Update `session-store.tsx` untuk Supabase session
 
 ### Fase C - Data
-- [ ] Update `store-repo.ts` dengan queries Supabase
-- [ ] Update `product-repo.ts` dengan queries Supabase
-- [ ] Tambahkan seed script (opsional, untuk demo juri)
+- [x] Update `store-repo.ts` dengan queries Supabase
+- [x] Update `product-repo.ts` dengan queries Supabase
+- [x] Tambahkan seed script (opsional, untuk demo juri)
 
 ### Fase D - Dashboard CRUD (mitra)
-- [ ] Form store create/update POST/PUT ke Supabase
-- [ ] Form product create/update/delete
-- [ ] Toggle available (optimistic UI)
-- [ ] Tambah kategori
+- [x] Form store create/update POST/PUT ke Supabase
+- [x] Form product create/update/delete
+- [x] Toggle available (optimistic UI)
+- [x] Tambah kategori
 
 ### Fase E - Cleanup
 - [ ] Hapus `seed-data.ts` (atau simpan sebagai fallback)
 - [ ] Tes end-to-end: register -> buat toko -> tambah produk -> publik bisa lihat
-- [ ] `bun run lint && bun run build`
+- [x] `bun run lint && bun run build`
+
+## Migrasi lanjutan
+
+Setelah skema di atas, jalankan juga
+[`migrations/001-dashboard-mitra.sql`](./migrations/001-dashboard-mitra.sql):
+kolom tambahan `stores`, policy baca publik `categories`, RPC
+`is_slug_available`, trigger `updated_at`, bucket `store-images` dengan
+policy per-folder user, dan index. **Tanpa migrasi ini kategori tidak tampil
+di halaman publik dan upload gambar gagal.**
+
+Dashboard mitra (Fase D) memakai rute: `/mitra/dashboard`, `/mitra/toko`,
+`/mitra/produk`, `/mitra/produk/baru`, `/mitra/produk/[id]`,
+`/mitra/kategori`, `/mitra/preview`.
 
 ## Panduan Setup Supabase
 

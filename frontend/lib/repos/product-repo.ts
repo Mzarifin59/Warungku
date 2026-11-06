@@ -1,69 +1,69 @@
 /**
- * Product repository — FASE 2 (Supabase).
+ * Product repository (client) — dipakai checkout.
  *
- * Query tabel `public.products`.
+ * Isi keranjang (nama & harga) disimpan di localStorage sehingga bisa basi
+ * atau diubah lewat DevTools. Sebelum pesan WhatsApp disusun, data produk &
+ * nomor WA warung SELALU diambil ulang dari database lewat fungsi ini.
  */
 
 import { createClient } from "@/lib/supabase/client";
-import type { Product } from "../types";
 
-function mapProduct(row: {
-  id: string;
-  store_id: string;
+export type ProductSnapshot = {
   name: string;
   price: number;
-  category_id: string | null;
-  description: string | null;
-  image_url: string | null;
   available: boolean;
-  sort_order: number;
-}): Product {
-  return {
-    id: row.id,
-    storeId: row.store_id,
-    name: row.name,
-    price: row.price,
-    categoryId: row.category_id,
-    description: row.description ?? undefined,
-    image: row.image_url ?? "",
-    available: row.available,
-    sortOrder: row.sort_order,
-  };
-}
+};
 
-export async function listProductsByStore(
-  storeId: string,
-): Promise<Product[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("products")
-    .select(
-      "id, store_id, name, price, category_id, description, image_url, available, sort_order",
-    )
-    .eq("store_id", storeId)
-    .order("sort_order");
-  if (error) return [];
-  return (data ?? []).map(mapProduct);
-}
+export type CheckoutSnapshot = {
+  /** Nomor WA warung terbaru dari DB (bentuk `62...`). */
+  whatsappNumber: string;
+  /** Produk yang masih ada di DB; id yang tidak ada = sudah dihapus. */
+  products: Map<string, ProductSnapshot>;
+};
 
-export async function checkAvailability(
-  storeId: string,
-  items: { productId: string }[],
-): Promise<Map<string, boolean>> {
-  if (items.length === 0) return new Map();
-
-  const ids = items.map((i) => i.productId);
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("products")
-    .select("id, available")
-    .eq("store_id", storeId)
-    .in("id", ids);
-
-  const result = new Map<string, boolean>();
-  const found = new Map((data ?? []).map((p) => [p.id, p.available]));
-  for (const { productId } of items) {
-    result.set(productId, found.get(productId) ?? false);
+export class StoreUnavailableError extends Error {
+  constructor() {
+    super("Warung ini sedang tidak menerima pesanan.");
   }
-  return result;
+}
+
+/**
+ * Ambil data terbaru untuk checkout. Melempar `StoreUnavailableError` bila
+ * warung sudah tidak terbit, atau `Error` biasa bila query gagal (offline).
+ */
+export async function getCheckoutSnapshot(
+  storeId: string,
+  productIds: string[],
+): Promise<CheckoutSnapshot> {
+  const supabase = createClient();
+  const [storeRes, productRes] = await Promise.all([
+    supabase
+      .from("stores")
+      .select("whatsapp_number, status")
+      .eq("id", storeId)
+      .maybeSingle(),
+    productIds.length === 0
+      ? Promise.resolve({ data: [], error: null })
+      : supabase
+          .from("products")
+          .select("id, name, price, available")
+          .eq("store_id", storeId)
+          .in("id", productIds),
+  ]);
+
+  if (storeRes.error) throw new Error(storeRes.error.message);
+  if (productRes.error) throw new Error(productRes.error.message);
+  if (!storeRes.data || storeRes.data.status !== "published") {
+    throw new StoreUnavailableError();
+  }
+
+  return {
+    whatsappNumber: storeRes.data.whatsapp_number,
+    products: new Map(
+      (productRes.data ?? []).map((p) => [
+        p.id,
+        { name: p.name, price: p.price, available: p.available },
+      ]),
+    ),
+  };
 }

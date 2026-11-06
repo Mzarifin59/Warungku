@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { listPublishedStoresLite } from "@/lib/repos/store-repo";
-import { toStoreDisplay, type StoreDisplay } from "@/lib/home-data";
+import { toStoreDisplay, type StoreDisplay } from "@/lib/store-display";
 import { WarungExplorePage } from "@/components/view/warung-explore-page";
 
 export const metadata: Metadata = {

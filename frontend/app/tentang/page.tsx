@@ -1,34 +1,14 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Icon, type IconName } from "@/components/icon";
+import { Icon } from "@/components/icon";
+import { aboutValues as values } from "@/lib/content/pages";
 
 export const metadata: Metadata = {
   title: "Tentang Kami — Warungku",
   description:
     "Kenali Warungku, ruang untuk menemukan warung lokal dan mendukung pelaku UMKM di sekitar kita.",
 };
-
-const values: { icon: IconName; title: string; description: string }[] = [
-  {
-    icon: "heart",
-    title: "Berpihak pada lokal",
-    description:
-      "Kami percaya usaha kecil punya cerita dan kualitas yang layak dikenal lebih luas.",
-  },
-  {
-    icon: "shield",
-    title: "Membangun kepercayaan",
-    description:
-      "Kami ingin membuat pengalaman menemukan warung terasa nyaman, jelas, dan mudah.",
-  },
-  {
-    icon: "bag",
-    title: "Tumbuh bersama",
-    description:
-      "Ketika pelanggan dan pemilik warung terhubung, komunitas lokal ikut berkembang.",
-  },
-];
 
 export default function TentangPage() {
   return (

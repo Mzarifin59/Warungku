@@ -1,15 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Copy, MessageCircle, TriangleAlert } from "lucide-react";
+import { Copy, MessageCircle, ShieldAlert, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Sheet } from "@/components/ui/sheet";
 import { Field, Input, Textarea } from "@/components/ui/input";
-import { checkAvailability } from "@/lib/repos/product-repo";
+import { needsReview, prepareCheckout } from "@/lib/checkout";
 import {
+  StoreUnavailableError,
+  getCheckoutSnapshot,
+} from "@/lib/repos/product-repo";
+import {
+  CUSTOMER_NAME_MAX,
+  ORDER_NOTE_MAX,
   buildWaLink,
   buildWhatsAppMessage,
+  toSingleLine,
   type OrderDetails,
 } from "@/lib/whatsapp-message";
 import { useCart } from "@/lib/cart-store";
@@ -42,17 +49,16 @@ export function CheckoutSheet({
     note: "",
   });
 
-  const [conflict, setConflict] = React.useState<CheckoutPreparation | null>(
-    null,
-  );
+  const [review, setReview] = React.useState<CheckoutPreparation | null>(null);
   const [message, setMessage] = React.useState("");
 
   async function handleContinue() {
-    const name = form.customerName.trim();
-    if (name.length < 2 || name.length > 60) {
+    const name = toSingleLine(form.customerName, CUSTOMER_NAME_MAX + 1);
+    if (name.length < 2 || name.length > CUSTOMER_NAME_MAX) {
       setFieldErrors({
-        name: "Nama minimal 2 karakter, maksimal 60.",
+        name: `Nama minimal 2 karakter, maksimal ${CUSTOMER_NAME_MAX}.`,
       });
+      document.getElementById("checkout-name")?.focus();
       return;
     }
     setFieldErrors({});
@@ -60,52 +66,46 @@ export function CheckoutSheet({
     setPhase("preparing");
 
     try {
-      const availability = await checkAvailability(
+      // Data keranjang (localStorage) tidak dipercaya: ambil ulang nama,
+      // harga, ketersediaan, dan nomor WA warung dari database.
+      const snapshot = await getCheckoutSnapshot(
         store.id,
-        cart.items.map((i) => ({ productId: i.productId })),
+        cart.items.map((i) => i.productId),
       );
+      const prep = prepareCheckout(cart.items, snapshot.products);
 
-      const safe = cart.items.filter((i) => availability.get(i.productId));
-      const conflicts = cart.items
-        .filter((i) => !availability.get(i.productId))
-        .map((i) => ({
-          item: i,
-          reason: (
-            store.products.some(
-              (p) => p.id === i.productId && !p.available,
-            )
-              ? "sold-out"
-              : "missing"
-          ) as "sold-out" | "missing",
-        }));
-
-      if (conflicts.length > 0) {
-        const safeTotal = safe.reduce(
-          (sum, i) => sum + i.unitPrice * i.quantity,
-          0,
-        );
-        setConflict({ safe, conflicts, safeTotal });
+      if (needsReview(prep)) {
+        setReview(prep);
         setPhase("idle");
         return;
       }
 
-      const msg = buildWhatsAppMessage(store, safe, form);
+      const msg = buildWhatsAppMessage(store, prep.safe, form);
       setMessage(msg);
-      window.open(buildWaLink(store.whatsappNumber, msg), "_blank", "noopener");
+      const waLink = buildWaLink(snapshot.whatsappNumber, msg);
+      // Popup bisa diblokir karena dibuka setelah request async → fallback.
+      // (Tanpa flag "noopener": dengan flag itu window.open selalu null.)
+      const opened = window.open(waLink, "_blank");
+      if (opened) opened.opener = null;
+      else window.location.href = waLink;
       setPhase("sent");
-    } catch {
-      setGeneralError("Pesan tidak bisa disiapkan. Silakan coba lagi.");
+    } catch (error) {
+      setGeneralError(
+        error instanceof StoreUnavailableError
+          ? error.message
+          : "Pesan tidak bisa disiapkan. Periksa koneksi lalu coba lagi.",
+      );
       setPhase("idle");
     }
   }
 
-  async function handleResolve() {
-    if (!conflict) return;
-    for (const { item } of conflict.conflicts) {
-      cart.setQuantity(item.productId, 0);
-    }
-    setConflict(null);
-    setPhase("idle");
+  /** Terapkan data terbaru ke keranjang; pembeli melihat ringkasan baru dulu. */
+  function handleApplyReview() {
+    if (!review) return;
+    cart.syncItems(review.safe);
+    const empty = review.safe.length === 0;
+    setReview(null);
+    if (empty) onBackToCart();
   }
 
   async function handleCopy() {
@@ -188,6 +188,7 @@ export function CheckoutSheet({
                 onChange={(e) => setForm((f) => ({ ...f, customerName: e.target.value }))}
                 placeholder="Nama untuk pesananmu"
                 autoComplete="name"
+                maxLength={CUSTOMER_NAME_MAX}
                 error={Boolean(fieldErrors.name)}
               />
             </Field>
@@ -202,18 +203,28 @@ export function CheckoutSheet({
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                 placeholder="Opsional, mis. tanpa pedas"
-                maxLength={200}
+                maxLength={ORDER_NOTE_MAX}
+                rows={2}
                 error={Boolean(fieldErrors.note)}
               />
             </Field>
           </div>
 
-          {/* Kotak kejujuran */}
-          <div className="flex items-start gap-2 rounded-lg border border-info-subtle bg-info-subtle p-3 text-xs text-info">
-            <TriangleAlert size={16} className="shrink-0" />
-            <p>
-              Pesanan resmi terkirim setelah kamu menekan Kirim di WhatsApp.
-              Total &amp; ketersediaan dikonfirmasi langsung oleh penjual.
+          {/* Kotak kejujuran & keamanan pembayaran */}
+          <div className="space-y-2 rounded-lg border border-info-subtle bg-info-subtle p-3 text-xs text-info">
+            <p className="flex items-start gap-2">
+              <TriangleAlert size={16} className="shrink-0" />
+              <span>
+                Pesanan resmi terkirim setelah kamu menekan Kirim di WhatsApp.
+                Total &amp; ketersediaan dikonfirmasi langsung oleh penjual.
+              </span>
+            </p>
+            <p className="flex items-start gap-2 font-medium">
+              <ShieldAlert size={16} className="shrink-0" />
+              <span>
+                Jangan transfer uang sebelum penjual mengonfirmasi pesananmu.
+                Warungku tidak pernah meminta pembayaran atau kode OTP.
+              </span>
             </p>
           </div>
 
@@ -249,41 +260,67 @@ export function CheckoutSheet({
         </div>
       )}
 
-      {/* Konflik item (P05) */}
+      {/* Konflik item & perubahan harga (P05) */}
       <Dialog
-        open={Boolean(conflict)}
-        onClose={() => setConflict(null)}
-        title="Beberapa item tidak tersedia"
-        confirmLabel="Hapus & lanjutkan"
-        cancelLabel="Kembali ke keranjang"
-        onConfirm={handleResolve}
+        open={Boolean(review)}
+        onClose={() => setReview(null)}
+        title={
+          review && review.conflicts.length > 0 && review.priceChanges.length > 0
+            ? "Keranjangmu perlu diperbarui"
+            : review && review.priceChanges.length > 0
+              ? "Ada harga yang berubah"
+              : "Beberapa item tidak tersedia"
+        }
+        confirmLabel={review?.safe.length === 0 ? "Kosongkan keranjang" : "Perbarui keranjang"}
+        cancelLabel="Batal"
+        onConfirm={handleApplyReview}
       >
-        {conflict && (
+        {review && (
           <div className="space-y-3">
-            <p>
-              Item berikut sudah <strong>habis / tidak dijual</strong>:
-            </p>
-            <ul className="space-y-1">
-              {conflict.conflicts.map(({ item, reason }) => (
-                <li key={item.productId} className="text-sm">
-                  • {item.name}{" "}
-                  <span className="text-text-subtle">
-                    ({reason === "sold-out" ? "Habis" : "Sudah tidak dijual"})
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {conflict.safe.length > 0 && (
-              <div className="rounded-lg bg-surface-muted p-3 text-xs">
-                <p className="text-text-muted">
-                  Estimasi total item yang tersisa:
+            {review.conflicts.length > 0 && (
+              <div>
+                <p>
+                  Item berikut sudah <strong>habis / tidak dijual</strong> dan akan dihapus:
                 </p>
-                <p className="text-sm font-semibold text-text">
-                  {formatRupiah(conflict.safeTotal)}
-                </p>
+                <ul className="mt-1 space-y-1">
+                  {review.conflicts.map(({ item, reason }) => (
+                    <li key={item.productId} className="text-sm">
+                      • {item.name || "Produk"}{" "}
+                      <span className="text-text-subtle">
+                        ({reason === "sold-out" ? "Habis" : "Sudah tidak dijual"})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
-            {conflict.safe.length === 0 && (
+            {review.priceChanges.length > 0 && (
+              <div>
+                <p>Harga terbaru dari penjual:</p>
+                <ul className="mt-1 space-y-1">
+                  {review.priceChanges.map(({ item, oldPrice, newPrice }) => (
+                    <li key={item.productId} className="flex flex-wrap justify-between gap-x-2 text-sm">
+                      <span className="min-w-0 truncate">• {item.name}</span>
+                      <span className="tabular-nums">
+                        <s className="text-text-subtle">{formatRupiah(oldPrice)}</s>{" "}
+                        <strong className="text-text">{formatRupiah(newPrice)}</strong>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {review.safe.length > 0 ? (
+              <div className="rounded-lg bg-surface-muted p-3 text-xs">
+                <p className="text-text-muted">Estimasi total setelah diperbarui:</p>
+                <p className="text-sm font-semibold text-text">
+                  {formatRupiah(review.safeTotal)}
+                </p>
+                <p className="mt-1 text-text-muted">
+                  Periksa ringkasan lalu tekan Lanjut ke WhatsApp lagi.
+                </p>
+              </div>
+            ) : (
               <p className="text-sm text-text-muted">
                 Semua item di keranjangmu tidak tersedia.
               </p>

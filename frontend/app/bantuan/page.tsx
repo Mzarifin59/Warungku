@@ -1,45 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icon";
+import { faqs } from "@/lib/content/pages";
 
 export const metadata: Metadata = {
   title: "Bantuan & FAQ — Warungku",
   description:
-    "Temukan jawaban atas pertanyaan umum tentang mencari warung dan menggunakan Warungku.",
+    "Jawaban atas pertanyaan umum tentang mencari warung, memesan, dan membuka warung di Warungku.",
 };
-
-const faqs = [
-  {
-    question: "Apa itu Warungku?",
-    answer:
-      "Warungku adalah tempat untuk menemukan warung dan produk dari pelaku UMKM lokal. Kamu bisa menjelajahi berbagai warung dan melihat informasi yang tersedia di halaman masing-masing.",
-  },
-  {
-    question: "Bagaimana cara mencari warung atau produk?",
-    answer:
-      "Buka halaman Jelajahi untuk melihat warung yang tersedia. Gunakan kolom pencarian untuk mencari berdasarkan nama warung, kategori, atau lokasi, lalu pilih kategori atau urutan yang kamu inginkan.",
-  },
-  {
-    question: "Bagaimana cara melihat informasi sebuah warung?",
-    answer:
-      "Pilih kartu warung dari halaman Jelajahi untuk membuka halaman detailnya. Di sana kamu dapat melihat informasi warung dan produk yang ditampilkan.",
-  },
-  {
-    question: "Apakah saya bisa memesan langsung melalui Warungku?",
-    answer:
-      "Warungku membantu kamu menemukan warung dan melihat informasi yang tersedia. Untuk mengetahui cara memesan, silakan ikuti informasi kontak atau pemesanan yang dicantumkan oleh warung terkait.",
-  },
-  {
-    question: "Bagaimana jika warung yang saya cari belum tersedia?",
-    answer:
-      "Daftar warung dapat terus bertambah. Coba gunakan kata kunci lain atau pilih kategori yang berbeda untuk menemukan pilihan yang tersedia saat ini.",
-  },
-  {
-    question: "Bagaimana cara menghubungi Warungku?",
-    answer:
-      "Saat ini informasi kontak layanan pelanggan belum tersedia di halaman ini. Jika pertanyaanmu berkaitan dengan produk atau pemesanan, hubungi warung terkait melalui informasi yang mereka cantumkan.",
-  },
-];
 
 export default function BantuanPage() {
   return (

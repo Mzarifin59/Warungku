@@ -1,264 +1,364 @@
 "use client";
 
 import * as React from "react";
-import { MessageCircle, Plus } from "lucide-react";
+import { MessageCircle, Plus, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { Icon, type IconName } from "@/components/icon";
 import { CartSheet } from "@/components/view/cart-sheet";
 import { CheckoutSheet } from "@/components/view/checkout-sheet";
 import { CartProvider, useCart } from "@/lib/cart-store";
-import { formatRupiah } from "@/lib/utils";
-import { logoColor, logoInitials } from "@/lib/home-data";
+import { logoColor, logoInitials, matchesQuery } from "@/lib/store-display";
+import { cn, formatRupiah } from "@/lib/utils";
 import type { Product, Store } from "@/lib/types";
 
-type Panel = "checkout" | null;
+type Panel = "cart" | "checkout" | null;
+
+/** Nilai filter kategori: "" = semua, "none" = tanpa kategori. */
+type CategoryFilter = string;
 
 export function WarungDetailPage({ store }: { store: Store }) {
   return (
     <CartProvider slug={store.slug}>
-      <DetailPageInner typedStore={store} />
+      <DetailPageInner store={store} />
     </CartProvider>
   );
 }
 
-function DetailPageInner({ typedStore }: { typedStore: Store }) {
+function DetailPageInner({ store }: { store: Store }) {
   const cart = useCart();
   const [panel, setPanel] = React.useState<Panel>(null);
-  const [openCart, setOpenCart] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [category, setCategory] = React.useState<CategoryFilter>("");
 
-  const storeProducts = typedStore.products;
+  const products = store.products;
+  const units = cart.items.reduce((sum, i) => sum + i.quantity, 0);
 
-  const stats: {
-    icon: IconName;
-    label: string;
-    value: string;
-    note?: string;
-    tint: string;
-  }[] = [
-    {
-      icon: "basket",
-      label: "Produk",
-      value: `${storeProducts.length} item`,
-      tint: "bg-secondary text-primary",
-    },
+  const categoryTabs = React.useMemo(() => {
+    const used = new Set(products.map((p) => p.categoryId));
+    const tabs = store.categories
+      .filter((c) => used.has(c.id))
+      .map((c) => ({ id: c.id, name: c.name }));
+    if (tabs.length > 0 && used.has(null)) tabs.push({ id: "none", name: "Lainnya" });
+    return tabs;
+  }, [products, store.categories]);
+
+  const categoryName = React.useMemo(
+    () => new Map(store.categories.map((c) => [c.id, c.name])),
+    [store.categories],
+  );
+
+  const visible = products.filter(
+    (p) =>
+      (!category || (category === "none" ? !p.categoryId : p.categoryId === category)) &&
+      matchesQuery(query, [p.name, p.description, p.categoryId ? categoryName.get(p.categoryId) : ""]),
+  );
+
+  const stats: { icon: IconName; label: string; value: string }[] = [
+    { icon: "basket", label: "Produk", value: `${products.length} item` },
+    ...(store.location ? [{ icon: "pin" as const, label: "Lokasi", value: store.location }] : []),
+    ...(store.operationHours
+      ? [{ icon: "clock" as const, label: "Jam buka", value: store.operationHours }]
+      : []),
+    ...(store.categories.length
+      ? [{ icon: "star" as const, label: "Kategori", value: `${store.categories.length} kategori` }]
+      : []),
   ];
 
-  function handleQuickAdd(product: Product) {
-    cart.add(product, 1);
-    setOpenCart(true);
-  }
-
-  function openCartSheet() {
-    setOpenCart(true);
-  }
-
   function openCheckout() {
-    if (cart.count === 0) {
-      setOpenCart(true);
-      return;
-    }
-    setPanel("checkout");
+    setPanel(cart.count === 0 ? "cart" : "checkout");
   }
 
   return (
-    <main className="bg-[#f3f8ff] pt-6 pb-12 sm:pt-8">
+    <main className={cn("bg-[#f3f8ff] pt-6 pb-12 sm:pt-8", units > 0 && "pb-28")}>
       {/* Header toko */}
-      <section
-        className="container mx-auto px-4 sm:px-6 lg:px-8"
-        aria-labelledby="warung-title"
-      >
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8" aria-labelledby="warung-title">
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-blue-900/5">
-          <div
-            className="h-32 bg-[#e8eff7] sm:h-40 lg:h-48"
-            role="img"
-            aria-label={`Sampul ${typedStore.name}`}
-          />
+          <div className="h-32 overflow-hidden bg-gradient-to-br from-[#e8eff7] to-[#d7e6f8] sm:h-44 lg:h-56">
+            {store.imageBanner && (
+              // eslint-disable-next-line @next/next/no-img-element -- URL banner dinamis (Storage / eksternal)
+              <img
+                src={store.imageBanner}
+                alt={`Sampul ${store.name}`}
+                className="h-full w-full object-cover"
+              />
+            )}
+          </div>
           <div className="px-4 pb-5 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <span
-                className="-mt-10 grid size-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-[#e8eff7] text-xl font-bold text-white shadow-sm sm:-mt-12 sm:size-24 sm:text-2xl"
+                className="-mt-10 grid size-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-white text-xl font-bold text-white shadow-sm sm:-mt-12 sm:size-24 sm:text-2xl"
                 aria-hidden="true"
               >
-                {typedStore.logo ? (
-                  <img
-                    src={typedStore.logo}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
+                {store.logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- URL logo dinamis
+                  <img src={store.logo} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <span
-                    className="grid h-full w-full place-items-center text-center"
-                    style={{ backgroundColor: logoColor(typedStore.name) }}
+                    className="grid h-full w-full place-items-center"
+                    style={{ backgroundColor: logoColor(store.name) }}
                   >
-                    {logoInitials(typedStore.name)}
+                    {logoInitials(store.name)}
                   </span>
                 )}
               </span>
               <div className="min-w-0 flex-1 sm:pb-1">
-                <h1
-                  className="truncate text-lg font-bold text-[#233e62] sm:text-xl"
-                  id="warung-title"
-                >
-                  {typedStore.name}
+                <h1 className="text-lg font-bold text-[#233e62] sm:text-2xl" id="warung-title">
+                  {store.name}
                 </h1>
-                <p className="text-sm text-[#6f82a1]">
-                  {typedStore.description}
-                </p>
+                {store.description && (
+                  <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[#6f82a1]">
+                    {store.description}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2 sm:pb-1">
-                <Button
-                  variant="whatsapp"
-                  size="sm"
-                  onClick={openCheckout}
-                  className="flex"
-                >
+                <Button variant="whatsapp" size="sm" onClick={openCheckout}>
                   <MessageCircle size={15} /> Pesan
                 </Button>
                 <button
                   type="button"
-                  onClick={openCartSheet}
+                  onClick={() => setPanel("cart")}
                   className="relative inline-flex h-9 items-center gap-1 rounded-lg border border-primary/40 bg-secondary px-3 text-sm font-medium text-primary transition hover:bg-[#c1ddff]"
-                  aria-label="Buka keranjang"
+                  aria-label={`Buka keranjang, ${units} item`}
                 >
                   <Icon name="bag" size={15} />
-                  <span className="sr-only">Keranjang</span>
-                  {cart.count > 0 && (
+                  {units > 0 && (
                     <span className="grid min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
-                      {cart.count}
+                      {units}
                     </span>
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 min-[480px]:grid-cols-2 lg:grid-cols-4">
+            <dl className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-5 lg:grid-cols-4">
               {stats.map((stat) => (
-                <div
-                  className="flex items-center gap-3 rounded-xl bg-[#f3f8ff] px-3.5 py-3"
-                  key={stat.label}
-                >
-                  <span
-                    className={`grid size-10 shrink-0 place-items-center rounded-lg ${stat.tint}`}
-                  >
-                    <Icon
-                      className={
-                        stat.icon === "star" ? "fill-current" : undefined
-                      }
-                      name={stat.icon}
-                      size={20}
-                    />
+                <div className="flex items-center gap-3 rounded-xl bg-[#f3f8ff] px-3 py-2.5" key={stat.label}>
+                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-secondary text-primary">
+                    <Icon name={stat.icon} size={18} />
                   </span>
                   <span className="min-w-0">
-                    <small className="block text-[11px] text-[#7185a0]">
-                      {stat.label}
-                    </small>
-                    <strong className="block truncate text-sm font-semibold text-[#2e496c]">
-                      {stat.value}
-                      {stat.note && (
-                        <span className="ml-1 text-xs font-normal text-[#7185a0]">
-                          {stat.note}
-                        </span>
-                      )}
-                    </strong>
+                    <dt className="text-[11px] text-[#7185a0]">{stat.label}</dt>
+                    <dd className="truncate text-sm font-semibold text-[#2e496c]">{stat.value}</dd>
                   </span>
                 </div>
               ))}
-            </div>
+            </dl>
           </div>
         </div>
       </section>
 
-      {/* Grid produk */}
-      <section
-        className="container mx-auto mt-10 px-4 sm:mt-14 sm:px-6 lg:px-8"
-        aria-labelledby="products-title"
-      >
-        <h2
-          className="mb-4 text-base font-bold text-[#2b4568] sm:text-xl"
-          id="products-title"
-        >
-          Semua Produk{" "}
-          <span className="text-xs font-semibold text-[#6f82a1]">
-            ({storeProducts.length} produk)
-          </span>
-        </h2>
-        {storeProducts.length === 0 ? (
+      {/* Produk */}
+      <section className="container mx-auto mt-8 px-4 sm:mt-10 sm:px-6 lg:px-8" aria-labelledby="products-title">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-base font-bold text-[#2b4568] sm:text-xl" id="products-title">
+            Produk{" "}
+            <span className="text-xs font-semibold text-[#6f82a1]">({products.length})</span>
+          </h2>
+          {products.length > 0 && (
+            <label className="flex h-11 w-full items-center gap-2 rounded-full border border-[#d9eaff] bg-white px-4 text-[#6882a8] focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-primary/10 sm:max-w-xs">
+              <Icon name="search" size={16} />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={`Cari di ${store.name}...`}
+                aria-label={`Cari produk di ${store.name}`}
+                className="w-full min-w-0 bg-transparent text-base text-foreground outline-none placeholder:text-[#8496b0] sm:text-sm"
+              />
+            </label>
+          )}
+        </div>
+
+        {categoryTabs.length > 1 && (
+          <div
+            className="sticky top-[112px] z-20 -mx-4 mb-4 flex gap-2 overflow-x-auto bg-[#f3f8ff]/95 px-4 py-2 backdrop-blur [scrollbar-width:none] sm:top-16 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0 [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label="Filter kategori produk"
+          >
+            {[{ id: "", name: "Semua" }, ...categoryTabs].map((tab) => {
+              const active = category === tab.id;
+              return (
+                <button
+                  key={tab.id || "semua"}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setCategory(tab.id)}
+                  className={cn(
+                    "inline-flex min-h-9 shrink-0 items-center rounded-full border px-3.5 text-xs font-medium transition sm:text-sm",
+                    active
+                      ? "border-primary bg-primary text-white"
+                      : "border-[#d9eaff] bg-white text-[#344f72] hover:border-blue-300",
+                  )}
+                >
+                  {tab.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {products.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-[#bcd6f5] bg-white/60 px-4 py-10 text-center text-sm text-[#7185a0]">
             Warung ini belum memiliki produk.
           </p>
+        ) : visible.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#bcd6f5] bg-white/60 px-4 py-10 text-center">
+            <p className="text-sm text-[#7185a0]">Tidak ada produk yang cocok.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setCategory("");
+              }}
+              className="mt-2 text-sm font-medium text-primary hover:underline"
+            >
+              Tampilkan semua produk
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-5">
-            {storeProducts.map((product) => (
-              <div
+            {visible.map((product) => (
+              <StoreProductCard
                 key={product.id}
-                className="relative min-w-0 overflow-hidden rounded-2xl border border-[#d9eaff] bg-white p-2 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10"
-              >
-                <div
-                  className="aspect-[1.2] rounded-xl bg-[#e7edf4] bg-cover bg-center"
-                  style={
-                    product.image
-                      ? { backgroundImage: `url("${product.image}")` }
-                      : undefined
-                  }
-                  role="img"
-                  aria-label={product.name}
-                >
-                  {!product.image && (
-                    <div className="grid h-full w-full place-items-center">
-                      <Icon name="bag" size={28} className="text-[#a8bcce]" />
-                    </div>
-                  )}
-                </div>
-                <div className="px-1 pt-2 pb-1">
-                  <h3 className="truncate text-xs font-semibold text-[#2c4669] sm:text-sm">
-                    {product.name}
-                  </h3>
-                  <span className="block truncate text-xs text-[#506681] sm:text-sm">
-                    {formatRupiah(product.price)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleQuickAdd(product)}
-                    disabled={!product.available}
-                    className={
-                      "mt-2 flex h-9 w-full items-center justify-center gap-1 rounded-lg text-xs font-semibold transition " +
-                      (!product.available
-                        ? "cursor-not-allowed bg-surface-muted text-text-subtle"
-                        : "bg-primary text-white hover:bg-primary/90")
-                    }
-                    aria-label={`Tambah ${product.name} ke keranjang`}
-                  >
-                    <Plus size={14} />
-                    {!product.available ? "Habis" : "Tambah"}
-                  </button>
-                </div>
-              </div>
+                product={product}
+                quantity={cart.getItem(product.id)?.quantity ?? 0}
+                onAdd={() => cart.add(product, 1)}
+                onChangeQuantity={(q) => cart.setQuantity(product.id, q)}
+              />
             ))}
           </div>
         )}
       </section>
 
-      {/* Sheet keranjang (P02) */}
-      {openCart && (
-        <CartSheet
-          open={openCart}
-          onClose={() => setOpenCart(false)}
-          onCheckout={openCheckout}
-        />
+      {/* Bar keranjang melayang */}
+      {units > 0 && panel === null && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#d9eaff] bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(30,64,120,0.08)] backdrop-blur">
+          <div className="container mx-auto flex items-center gap-3 sm:px-2 lg:px-4">
+            <button
+              type="button"
+              onClick={() => setPanel("cart")}
+              className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            >
+              <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-secondary text-primary">
+                <ShoppingBag size={18} />
+                <span className="absolute -top-1 -right-1 grid min-w-5 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+                  {units}
+                </span>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[11px] text-[#7185a0]">Estimasi total</span>
+                <strong className="block truncate text-base text-[#263f63]">
+                  {formatRupiah(cart.total)}
+                </strong>
+              </span>
+            </button>
+            <Button variant="whatsapp" onClick={openCheckout} className="shrink-0">
+              <MessageCircle size={16} /> Pesan via WhatsApp
+            </Button>
+          </div>
+        </div>
       )}
 
-      {/* Checkout + WA (P03) */}
+      {panel === "cart" && (
+        <CartSheet open onClose={() => setPanel(null)} onCheckout={openCheckout} />
+      )}
+
       {panel === "checkout" && (
         <CheckoutSheet
           open
-          store={typedStore}
+          store={store}
           onClose={() => setPanel(null)}
-          onBackToCart={() => {
-            setPanel(null);
-            setOpenCart(true);
-          }}
+          onBackToCart={() => setPanel("cart")}
         />
       )}
     </main>
+  );
+}
+
+function StoreProductCard({
+  product,
+  quantity,
+  onAdd,
+  onChangeQuantity,
+}: {
+  product: Product;
+  quantity: number;
+  onAdd: () => void;
+  onChangeQuantity: (quantity: number) => void;
+}) {
+  return (
+    <article
+      className={cn(
+        "flex min-w-0 flex-col overflow-hidden rounded-2xl border bg-white p-2 transition",
+        quantity > 0 ? "border-primary/50 shadow-md shadow-blue-900/10" : "border-[#d9eaff]",
+        product.available && "hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10",
+      )}
+    >
+      <div className="relative aspect-[1.15] overflow-hidden rounded-xl bg-[#e7edf4]">
+        {product.image ? (
+          // eslint-disable-next-line @next/next/no-img-element -- URL dinamis
+          <img
+            src={product.image}
+            alt=""
+            loading="lazy"
+            className={cn("size-full object-cover", !product.available && "opacity-60 grayscale")}
+          />
+        ) : (
+          <span className="grid size-full place-items-center text-[#a8bcce]">
+            <Icon name="bag" size={28} />
+          </span>
+        )}
+        {!product.available && (
+          <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-medium text-white">
+            Habis
+          </span>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col px-1 pt-2 pb-1">
+        <h3 className="line-clamp-2 text-xs font-semibold leading-snug text-[#2c4669] sm:text-sm">
+          {product.name}
+        </h3>
+        {product.description && (
+          <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#8292aa]">
+            {product.description}
+          </p>
+        )}
+        <span className="mt-1 text-sm font-bold text-[#263f63]">{formatRupiah(product.price)}</span>
+        <div className="mt-auto pt-2">
+          {quantity > 0 && product.available ? (
+            <QuantityStepper
+              size="sm"
+              min={0}
+              value={quantity}
+              onChange={onChangeQuantity}
+              label={`Jumlah ${product.name}`}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={onAdd}
+              disabled={!product.available}
+              className={cn(
+                "flex h-9 w-full items-center justify-center gap-1 rounded-lg text-xs font-semibold transition",
+                product.available
+                  ? "bg-primary text-white hover:bg-primary/90"
+                  : "cursor-not-allowed bg-surface-muted text-text-subtle",
+              )}
+              aria-label={product.available ? `Tambah ${product.name} ke keranjang` : `${product.name} habis`}
+            >
+              {product.available ? (
+                <>
+                  <Plus size={14} /> Tambah
+                </>
+              ) : (
+                "Habis"
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    </article>
   );
 }

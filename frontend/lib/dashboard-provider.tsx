@@ -1,143 +1,136 @@
 "use client";
 
 import * as React from "react";
-import { createClient } from "@/lib/supabase/client";
+import {
+  ToasterProvider,
+  TOAST_DURATION_MS,
+  nextToastId,
+  type ToastMessage,
+} from "@/components/ui/toast";
+import { fetchOwnedStore } from "./supabase/mutations";
+import { byCategoryOrder, byProductOrder } from "./supabase/mappers";
 import { useSession } from "./session-store";
-import type { Category, Product, Store } from "./types";
+import type { Store } from "./types";
 
-type Status = "loading" | "ready" | "no-store";
+type Status = "loading" | "ready" | "no-store" | "error";
+
+type ToastInput = Omit<ToastMessage, "id" | "variant"> & {
+  variant?: ToastMessage["variant"];
+};
 
 interface DashboardContextValue {
   status: Status;
   store: Store | null;
-  /** Panggil ulang untuk refresh data (mis. setelah simpan form). */
+  error: string | null;
+  /** Muat ulang data toko dari server. */
   refresh: () => Promise<void>;
+  /**
+   * Ubah data toko secara lokal (optimistic update). Produk & kategori
+   * otomatis diurutkan ulang.
+   */
+  patchStore: (updater: (store: Store) => Store) => void;
+  toast: (input: ToastInput) => void;
 }
 
 const DashboardContext = React.createContext<DashboardContextValue | null>(null);
 
-function mapCategory(row: { id: string; name: string; sort_order: number }): Category {
-  return { id: row.id, name: row.name, sortOrder: row.sort_order };
-}
-
-function mapProduct(row: {
-  id: string;
-  store_id: string;
-  name: string;
-  price: number;
-  category_id: string | null;
-  description: string | null;
-  image_url: string | null;
-  available: boolean;
-  sort_order: number;
-}): Product {
-  return {
-    id: row.id,
-    storeId: row.store_id,
-    name: row.name,
-    price: row.price,
-    categoryId: row.category_id,
-    description: row.description ?? undefined,
-    image: row.image_url ?? "",
-    available: row.available,
-    sortOrder: row.sort_order,
-  };
-}
-
-async function fetchOwnedStore(ownerUserId: string): Promise<Store | null> {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("stores")
-    .select(
-      "id, owner_id, name, slug, description, whatsapp_number, logo_url, image_banner, operation_hours, status",
-    )
-    .eq("owner_id", ownerUserId)
-    .limit(1);
-  if (!data?.length) return null;
-
-  const row = data[0];
-  const [cats, prods] = await Promise.all([
-    supabase
-      .from("categories")
-      .select("id, name, sort_order")
-      .eq("store_id", row.id)
-      .order("sort_order"),
-    supabase
-      .from("products")
-      .select(
-        "id, store_id, name, price, category_id, description, image_url, available, sort_order",
-      )
-      .eq("store_id", row.id)
-      .order("sort_order"),
-  ]);
-
-  return {
-    id: row.id,
-    ownerName: "",
-    name: row.name,
-    slug: row.slug,
-    description: row.description ?? undefined,
-    whatsappNumber: row.whatsapp_number,
-    logo: row.logo_url ?? undefined,
-    imageBanner: row.image_banner ?? undefined,
-    operationHours: row.operation_hours ?? undefined,
-    status: row.status,
-    categories: (cats.data ?? []).map(mapCategory),
-    products: (prods.data ?? []).map(mapProduct),
-  };
-}
-
 /**
- * Ambil toko milik user dari Supabase (client-side). Di-mount di layout
- * /mitra; dashboard & produk memakai `useDashboardStore()`.
+ * Data toko milik user yang login (client-side). Di-mount di layout
+ * `/mitra`; semua halaman dashboard memakai `useDashboardStore()`.
  */
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
   const { session, initializing } = useSession();
   const [status, setStatus] = React.useState<Status>("loading");
   const [store, setStore] = React.useState<Store | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
 
-  const userId = session?.user?.id;
+  const userId = session?.user.id;
 
-  // Initial load (and reload when userId / initializing changes).
+  const load = React.useCallback(async (id: string) => {
+    const result = await fetchOwnedStore(id);
+    if (!result.ok) {
+      setError(result.message);
+      setStatus("error");
+      return;
+    }
+    setError(null);
+    setStore(result.data);
+    setStatus(result.data ? "ready" : "no-store");
+  }, []);
+
   React.useEffect(() => {
-    if (initializing) return;
+    // Tanpa user: proxy sudah mengarahkan ke /login; status diturunkan di bawah.
+    if (initializing || !userId) return;
     let cancelled = false;
-
-    (async () => {
-      if (!userId) {
-        if (!cancelled) setStatus("no-store");
+    fetchOwnedStore(userId).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setError(result.message);
+        setStatus("error");
         return;
       }
-      const s = await fetchOwnedStore(userId);
-      if (cancelled) return;
-      setStore(s);
-      setStatus(s ? "ready" : "no-store");
-    })();
-
+      setError(null);
+      setStore(result.data);
+      setStatus(result.data ? "ready" : "no-store");
+    });
     return () => {
       cancelled = true;
     };
   }, [userId, initializing]);
 
   const refresh = React.useCallback(async () => {
-    if (!userId) return;
-    const s = await fetchOwnedStore(userId);
-    setStore(s);
-    setStatus(s ? "ready" : "no-store");
-  }, [userId]);
+    if (userId) await load(userId);
+  }, [userId, load]);
 
-  const value = React.useMemo(
+  const patchStore = React.useCallback(
+    (updater: (store: Store) => Store) => {
+      setStore((prev) => {
+        if (!prev) return prev;
+        const next = updater(prev);
+        return {
+          ...next,
+          categories: [...next.categories].sort(byCategoryOrder),
+          products: [...next.products].sort(byProductOrder),
+        };
+      });
+    },
+    [],
+  );
+
+  const dismissToast = React.useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const toast = React.useCallback(
+    (input: ToastInput) => {
+      const id = nextToastId();
+      setToasts((prev) => [
+        ...prev.slice(-2),
+        { variant: "success", ...input, id },
+      ]);
+      window.setTimeout(() => dismissToast(id), TOAST_DURATION_MS);
+    },
+    [dismissToast],
+  );
+
+  const value = React.useMemo<DashboardContextValue>(
     () => ({
-      status: initializing ? "loading" : status,
-      store,
+      status: initializing ? "loading" : userId ? status : "no-store",
+      store: userId ? store : null,
+      error,
       refresh,
+      patchStore,
+      toast,
     }),
-    [status, store, initializing, refresh],
+    [initializing, userId, status, store, error, refresh, patchStore, toast],
   );
 
   return (
     <DashboardContext.Provider value={value}>
-      {children}
+      <ToasterProvider toasts={toasts} onDismiss={dismissToast}>
+        {children}
+      </ToasterProvider>
     </DashboardContext.Provider>
   );
 }
@@ -145,7 +138,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
 export function useDashboardStore(): DashboardContextValue {
   const ctx = React.useContext(DashboardContext);
   if (!ctx) {
-    throw new Error("useDashboardStore harus dipakai di dalam <DashboardProvider>.");
+    throw new Error(
+      "useDashboardStore harus dipakai di dalam <DashboardProvider>.",
+    );
   }
   return ctx;
 }

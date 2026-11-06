@@ -1,36 +1,37 @@
-import type { IconName } from "@/components/icon";
-
-export type Category = {
-  name: string;
-  icon: IconName;
-  color: string;
-};
-
 /**
- * Tipe display home/explore page (sumber: data Supabase, bukan mock).
+ * Bentuk data "display" untuk kartu warung & produk di halaman publik,
+ * plus helper avatar inisial. Sumber datanya Supabase (lihat
+ * `lib/repos/*`); konten statis ada di `lib/content/*`.
  */
+
+/** Kartu warung (beranda, jelajahi, hasil pencarian). */
 export type StoreDisplay = {
+  id: string;
   name: string;
   slug: string;
-  /** Kategori utama toko (nama kategori pertama). */
+  /** Kategori utama (kategori pertama) — label kecil di kartu. */
   category: string;
+  /** Semua nama kategori warung — untuk filter & pencarian. */
+  categories: string[];
   location: string;
-  /** Gambar banner (dari kolom image_banner). */
+  /** Gambar banner (kolom image_banner). */
   image: string;
-  /** URL logo bulat (dari kolom logo_url). */
+  /** URL logo bulat (kolom logo_url). */
   logo: string;
   tagline: string;
   hours: string;
   createdAt: string;
 };
 
+/** Kartu produk lintas warung (beranda, hasil pencarian). */
 export type ProductDisplay = {
   id: string;
   name: string;
-  price: string;
-  store: string;
-  slug: string;
+  /** Harga integer Rupiah. */
+  price: number;
+  available: boolean;
   image: string;
+  store: { name: string; slug: string; logo: string };
 };
 
 function hashString(value: string): number {
@@ -66,11 +67,8 @@ export function logoColor(name: string): string {
   return LOGO_COLORS[hashString(name) % LOGO_COLORS.length];
 }
 
-/**
- * Ubah toko ringan (dari `listPublishedStoresLite`) menjadi bentuk display
- * untuk kartu home/explore.
- */
 export function toStoreDisplay(store: {
+  id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -82,49 +80,34 @@ export function toStoreDisplay(store: {
   categories: { name: string }[];
 }): StoreDisplay {
   return {
+    id: store.id,
     name: store.name,
     slug: store.slug,
     category: store.categories[0]?.name ?? "UMKM",
+    categories: store.categories.map((c) => c.name),
     location: store.location ?? "",
     image: store.imageBanner ?? "",
     logo: store.logoUrl ?? "",
-    tagline: store.description || store.name,
+    tagline: store.description || "",
     hours: store.operationHours ?? "",
     createdAt: store.createdAt,
   };
 }
 
-export const categories: Category[] = [
-  { name: "Makanan", icon: "utensils", color: "#ef4444" },
-  { name: "Minuman", icon: "cup", color: "#f5c400" },
-  { name: "Cemilan", icon: "popcorn", color: "#fb8737" },
-  { name: "Kebutuhan Harian", icon: "basket", color: "#6383ed" },
-  { name: "Roti & Kue", icon: "cake", color: "#e77e66" },
-  { name: "Kerajinan", icon: "scissors", color: "#95958f" },
-];
-
-export const benefits: { icon: IconName; title: string; description: string }[] = [
-  {
-    icon: "devices",
-    title: "Responsif",
-    description: "Nyaman di semua perangkat",
-  },
-  {
-    icon: "shield",
-    title: "Aman & Terpercaya",
-    description: "Transaksi lebih aman",
-  },
-  {
-    icon: "headset",
-    title: "Bantuan 24/7",
-    description: "Siap membantu kapan saja",
-  },
-];
-
-export function slugify(name: string) {
-  return name
+/** Normalisasi teks untuk pencarian client-side (huruf kecil, tanpa aksen). */
+export function normalizeSearch(value: string): string {
+  return value
     .toLowerCase()
-    .replace(/&/g, "dan")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Semua kata di `query` muncul di salah satu `fields`. */
+export function matchesQuery(query: string, fields: (string | undefined)[]): boolean {
+  const q = normalizeSearch(query);
+  if (!q) return true;
+  const haystack = normalizeSearch(fields.filter(Boolean).join(" "));
+  return q.split(" ").every((word) => haystack.includes(word));
 }

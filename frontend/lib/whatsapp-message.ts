@@ -1,61 +1,84 @@
 /**
- * Composer pesan WhatsApp — WarungKu Fase 1.
- *
- * // TODO(api): di Fase 2 pesan ini tetap dikomposisi client-side karena
- * dikirim lewat wa.me (bukan ke backend). Lihat docs 01 §6 & 05 P03.
+ * Composer pesan WhatsApp.
  *
  * Aturan kejujuran (docs 01 §6): total selalu "Estimasi", pesan tidak
  * boleh mengklaim pesanan "berhasil/diterima".
+ *
+ * Keamanan:
+ * - `items` HARUS hasil `prepareCheckout` (nama & harga dari database),
+ *   bukan isi keranjang mentah dari localStorage.
+ * - Teks bebas (nama pembeli, catatan, nama produk) dibersihkan menjadi
+ *   satu baris, sehingga tidak bisa menyisipkan baris palsu seperti
+ *   "Estimasi total: Rp 1".
  */
 
 import { formatRupiah } from "./utils";
 import { CART_QTY_MAX, CART_QTY_MIN } from "./constants";
 import type { CartItem, Store } from "./types";
 
+export const CUSTOMER_NAME_MAX = 60;
+export const ORDER_NOTE_MAX = 200;
+
 export interface OrderDetails {
   customerName: string;
   note?: string;
 }
 
-/** Susun pesan teks WhatsApp dari keranjang. */
+const CONTROL_CHARS = new RegExp("[\u0000-\u001f\u007f-\u009f\u2028\u2029]", "g");
+const INVISIBLE_CHARS = new RegExp("[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]", "g");
+
+/**
+ * Jadikan teks bebas aman untuk satu baris pesan: buang karakter kontrol &
+ * baris baru, karakter tak terlihat (zero-width/bidi), rapikan spasi,
+ * potong ke `max` karakter.
+ */
+export function toSingleLine(value: string | undefined, max: number): string {
+  const cleaned = (value ?? "")
+    .replace(CONTROL_CHARS, " ")
+    .replace(INVISIBLE_CHARS, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  // Array.from: potong per karakter (aman untuk emoji / surrogate pair).
+  return Array.from(cleaned).slice(0, max).join("").trim();
+}
+
+/** Susun pesan teks WhatsApp dari item yang SUDAH diverifikasi. */
 export function buildWhatsAppMessage(
-  store: Store,
+  store: Pick<Store, "name">,
   items: CartItem[],
   details: OrderDetails,
 ): string {
   const lines: string[] = [];
-  lines.push(`Halo ${store.name}!`);
-  lines.push(`Saya ingin memesan:`, "");
+  lines.push(`Halo ${toSingleLine(store.name, 80)}!`);
+  lines.push("Saya ingin memesan:", "");
 
+  let total = 0;
   for (const item of items) {
+    const subtotal = item.unitPrice * item.quantity;
+    total += subtotal;
     lines.push(
-      `• ${item.name} × ${item.quantity} = ${formatRupiah(
-        item.unitPrice * item.quantity,
-      )}`,
+      `• ${toSingleLine(item.name, 100)} × ${item.quantity} = ${formatRupiah(subtotal)}`,
     );
   }
 
-  const total = items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
   lines.push("");
   lines.push(`Estimasi total: ${formatRupiah(total)}`);
-  lines.push(`Nama: ${details.customerName.trim()}`);
-  if (details.note?.trim()) {
-    lines.push(`Catatan: ${details.note.trim()}`);
-  }
+  lines.push("");
+  lines.push(`Nama pembeli: ${toSingleLine(details.customerName, CUSTOMER_NAME_MAX)}`);
+  const note = toSingleLine(details.note, ORDER_NOTE_MAX);
+  if (note) lines.push(`Catatan pembeli: "${note}"`);
   lines.push("");
   lines.push(
-    "(Mohon konfirmasi ketersediaan & total akhir. Pesanan resmi terkirim setelah saya menekan Kirim di WhatsApp.)",
+    "(Dikirim lewat Warungku. Harga sesuai katalog saat pesan dibuat — mohon konfirmasi ketersediaan & total akhir.)",
   );
 
   return lines.join("\n");
 }
 
-/** Buka tautan wa.me dengan pesan terisi (URL-encode). */
+/** Tautan wa.me dengan pesan terisi. Nomor dipaksa hanya digit. */
 export function buildWaLink(whatsappNumber: string, message: string): string {
-  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+  const digits = whatsappNumber.replace(/\D/g, "");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
 export { CART_QTY_MIN, CART_QTY_MAX };

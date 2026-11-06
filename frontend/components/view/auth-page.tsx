@@ -25,7 +25,12 @@ export function AuthPage({ mode }: AuthPageProps) {
   const { signIn, signUp } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextParam = searchParams.get("next") ?? "/mitra/dashboard";
+  const rawNext = searchParams.get("next");
+  // Hanya izinkan path internal (cegah open redirect).
+  const nextParam =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/mitra/dashboard";
 
   const [submitting, setSubmitting] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrorMap>({});
@@ -73,11 +78,13 @@ export function AuthPage({ mode }: AuthPageProps) {
       if (isLogin) {
         const input = parsed.data as unknown as LoginInput;
         await signIn(input);
-        router.push(nextParam);
+        router.replace(nextParam);
+        router.refresh();
       } else {
         const input = parsed.data as unknown as RegisterInput;
         await signUp(input);
-        router.push(nextParam);
+        router.replace(nextParam);
+        router.refresh();
       }
     } catch (err) {
       setGeneralError(err instanceof Error ? err.message : "Terjadi kesalahan. Coba lagi.");

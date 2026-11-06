@@ -1,0 +1,10 @@
+# DECISIONS — Frontend
+
+Format: `tanggal — keputusan — alasan`.
+
+- 2026-11-06 — Frontend keluar dari "Fase 1 mock": data & auth memakai Supabase langsung dari browser/server client (`lib/supabase/*`), termasuk CRUD dashboard mitra. Larangan network call/auth middleware di `frontend/AGENTS.md` tidak berlaku lagi untuk integrasi Supabase. — Diminta langsung oleh pemilik proyek agar website bisa dipakai end-to-end; backend Laravel digantikan Supabase (lihat `docs/supabase/plan.md`).
+- 2026-11-06 — Rute dashboard tetap di `/mitra/*` (bukan `/dashboard/*` seperti docs 03/05): `/mitra/dashboard` (D01), `/mitra/toko` (D02), `/mitra/produk` (D03), `/mitra/produk/baru` (D04), `/mitra/produk/[id]` (D05), `/mitra/kategori` (D06), `/mitra/preview`. — Mengikuti rute yang sudah ada di kode & navigasi; spesifikasi isi layar tetap mengikuti docs 05.
+- 2026-11-06 — Token visual dashboard tetap memakai token kode saat ini (`globals.css`, primary biru, Poppins); konflik dengan docs 02 (terracotta + Plus Jakarta Sans) belum diputuskan. — Pekerjaan ini fokus ke integrasi data, bukan perubahan desain.
+- 2026-11-06 — Tambah rute publik `/cari?q=` (pencarian warung + produk + kategori, server-side via Supabase `ilike`); filter Jelajahi disimpan di URL (`?q=&kategori=&urut=`). — Fitur search di header sebelumnya tidak berfungsi; hasil bisa dibagikan & tombol back bekerja.
+- 2026-11-06 — Konten statis (navigasi, footer, hero, kategori beranda, FAQ) dipusatkan di `frontend/lib/content/*`; `lib/home-data.ts` → `lib/store-display.ts` (hanya tipe & helper), `seed-data.ts` dan `landing-sections.tsx` (tidak dipakai) dihapus. — Memudahkan mengubah konten tanpa menyentuh komponen.
+- 2026-11-06 — Checkout tidak mempercayai keranjang di localStorage: nama, harga, ketersediaan produk, status warung, dan nomor WA diambil ulang dari Supabase (`getCheckoutSnapshot` + `prepareCheckout`); perubahan harga wajib ditinjau pembeli sebelum pesan disusun. Teks bebas di pesan WA dibersihkan jadi satu baris (`toSingleLine`). — Mencegah manipulasi harga lewat DevTools, harga basi, dan baris palsu ("Estimasi total: Rp 1") yang bisa menipu penjual.
