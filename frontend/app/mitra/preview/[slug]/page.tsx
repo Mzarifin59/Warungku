@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getStoreBySlug } from "@/lib/repos/store-repo";
 import { WarungDetailPage } from "@/components/view/warung-detail-page";
-import { getPublicStore } from "./lib";
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const store = await getPublicStore((await params).slug);
+  const store = await getStoreBySlug((await params).slug);
   return store ? { title: `Preview ${store.name} — Warungku` } : {};
 }
 
@@ -18,7 +18,7 @@ export default async function MitraStorePreview({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const store = await getPublicStore((await params).slug);
+  const store = await getStoreBySlug((await params).slug);
   if (!store) notFound();
 
   return (

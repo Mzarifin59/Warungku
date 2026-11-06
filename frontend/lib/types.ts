@@ -57,6 +57,10 @@ export interface Store {
   whatsappNumber: string;
   /** URL logo bulat. Fase 1: boleh placeholder/inisial. */
   logo?: string;
+  /** URL gambar banner warung. */
+  imageBanner?: string;
+  /** Jam operasional, mis. "07:00 - 20:00". */
+  operationHours?: string;
   status: StoreStatus;
   categories: Category[];
   products: Product[];

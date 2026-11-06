@@ -1,10 +1,11 @@
 import { StoreCard } from "@/components/store-card";
-import { benefits, categories, stores } from "@/lib/home-data";
+import { benefits, categories, type StoreDisplay } from "@/lib/home-data";
 import { Icon } from "@/components/icon";
 import { BenefitsIllustration } from "@/components/benefits-illustration";
 
 // ProductSection sudah dipisah ke client component (pakai useRouter).
 export { ProductSection } from "@/components/product-section";
+export type { ProductDisplay, StoreDisplay } from "@/lib/home-data";
 
 function SectionHeading({
   title,
@@ -71,7 +72,7 @@ export function CategorySection() {
   );
 }
 
-export function StoreSection() {
+export function StoreSection({ stores }: { stores: StoreDisplay[] }) {
   return (
     <section className="container mx-auto px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
       <SectionHeading
@@ -81,7 +82,7 @@ export function StoreSection() {
       />
       <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {stores.map((store) => (
-          <StoreCard key={store.name} store={store} />
+          <StoreCard key={store.slug} store={store} />
         ))}
       </div>
     </section>

@@ -5,6 +5,6 @@ export const metadata: Metadata = {
   title: "Dashboard Mitra — Warungku",
 };
 
-export default function MitraDashboardRoute() {
+export default function Page() {
   return <MitraDashboardPage />;
 }

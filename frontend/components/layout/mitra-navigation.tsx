@@ -3,18 +3,23 @@
 import { Box, LayoutDashboard, LogOut, Store } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const navigation = [
-  { label: "Dashboard", href: "/mitra/dashboard", icon: LayoutDashboard },
-  { label: "Warung Saya", href: "/mitra/preview/dapur-rasa", icon: Store },
-  { label: "Produk", href: "/mitra/produk", icon: Box },
-];
+import { useDashboardStore } from "@/lib/dashboard-provider";
 
 export function MitraNavigation({ compact = false }: { compact?: boolean }) {
   const pathname = usePathname();
+  const { store } = useDashboardStore();
+
+  const previewHref = store ? `/mitra/preview/${store.slug}` : "/mitra/dashboard";
+
+  const navigation = [
+    { label: "Dashboard", href: "/mitra/dashboard", icon: LayoutDashboard },
+    { label: "Warung Saya", href: previewHref, icon: Store },
+    { label: "Produk", href: "/mitra/produk", icon: Box },
+  ];
+
   const items = navigation.map(({ label, href, icon: NavIcon }) => {
     const active =
-      href === "/mitra/preview/dapur-rasa"
+      label === "Warung Saya"
         ? pathname.startsWith("/mitra/preview")
         : pathname === href;
 
@@ -60,6 +65,11 @@ export function MitraNavigation({ compact = false }: { compact?: boolean }) {
 }
 
 export function MitraNavigationFallback({ compact = false }: { compact?: boolean }) {
+  const navigation = [
+    { label: "Dashboard", href: "/mitra/dashboard" },
+    { label: "Warung Saya", href: "/mitra/dashboard" },
+    { label: "Produk", href: "/mitra/produk" },
+  ];
   const links = navigation.map(({ label, href }) => (
     <Link
       className={

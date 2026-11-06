@@ -69,7 +69,7 @@ export function CartSheet({
         <ul className="space-y-3">
           {cart.items.map((item) => (
             <li key={item.productId} className="flex gap-3">
-              <div className="size-14 shrink-0 overflow-hidden rounded-lg bg-surface-muted">
+              <div className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-muted">
                 {item.image ? (
                   <img
                     src={item.image}
@@ -78,9 +78,7 @@ export function CartSheet({
                     loading="lazy"
                   />
                 ) : (
-                  <div className="grid h-full w-full place-items-center text-sm font-bold text-text-subtle">
-                    {item.name.charAt(0)}
-                  </div>
+                  <ShoppingBag size={20} className="text-text-subtle" />
                 )}
               </div>
               <div className="min-w-0 flex-1">

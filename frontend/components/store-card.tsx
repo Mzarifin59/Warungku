@@ -1,27 +1,46 @@
 import Link from "next/link";
 import { Icon } from "@/components/icon";
-import { slugify, type Store } from "@/lib/home-data";
+import {
+  logoColor,
+  logoInitials,
+  type StoreDisplay,
+} from "@/lib/home-data";
 
-export function StoreCard({ store }: { store: Store }) {
+export function StoreCard({ store }: { store: StoreDisplay }) {
+  const hasLogo = Boolean(store.logo);
+  const logoText = hasLogo ? undefined : logoInitials(store.name);
+  const logoColorValue = hasLogo ? undefined : logoColor(store.name);
   return (
     <Link
       className="overflow-hidden rounded-2xl border border-[#d9eaff] bg-white transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10"
-      href={`/warung/${slugify(store.name)}`}
+      href={`/warung/${store.slug}`}
     >
-      <div
-        className="h-36 bg-[#e8eff7] bg-cover bg-center sm:h-40"
-        style={{ backgroundImage: `url("${store.image}")` }}
-        role="img"
-        aria-label={store.name}
-      />
+      {store.image ? (
+        <img
+          src={store.image}
+          alt={store.name}
+          className="h-36 w-full object-cover sm:h-40"
+        />
+      ) : (
+        <div className="h-36 bg-[#e8eff7] sm:h-40" role="img" aria-label={store.name} />
+      )}
       <div className="relative px-3 pt-3 pb-3 sm:px-4">
-        <span
-          className="absolute -top-6 left-3 grid size-12 place-items-center rounded-full border-[3px] border-white text-[11px] font-bold text-white shadow-sm sm:left-4"
-          style={{ backgroundColor: store.logoColor }}
-          aria-hidden="true"
-        >
-          {store.logo}
-        </span>
+        {hasLogo ? (
+          <img
+            src={store.logo}
+            alt=""
+            className="absolute -top-6 left-3 size-12 rounded-full border-[3px] border-white object-cover shadow-sm sm:left-4"
+            style={{ objectFit: "cover" }}
+          />
+        ) : (
+          <span
+            className="absolute -top-6 left-3 grid size-12 place-items-center rounded-full border-[3px] border-white text-[11px] font-bold text-white shadow-sm sm:left-4"
+            style={{ backgroundColor: logoColorValue }}
+            aria-hidden="true"
+          >
+            {logoText}
+          </span>
+        )}
         <div className="mb-2 flex items-center justify-between gap-2 pl-12 text-[#2d4669]">
           <strong className="truncate text-sm font-semibold">{store.name}</strong>
           <Icon className="shrink-0 text-[#385b83]" name="chevron" size={16} />
@@ -29,15 +48,9 @@ export function StoreCard({ store }: { store: Store }) {
         <span className="inline-block rounded-full bg-[#edf6ff] px-2.5 py-1 text-[11px] text-[#4f77a8]">
           {store.category}
         </span>
-        <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-[#7185a0] sm:text-xs">
-          <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <Icon className="fill-amber-400 text-amber-400" name="star" size={13} />
-            {store.rating} ({store.reviews})
-          </span>
-          <span className="inline-flex min-w-0 items-center gap-1">
-            <Icon className="shrink-0" name="pin" size={13} />
-            <span className="truncate">{store.location}</span>
-          </span>
+        <div className="mt-3 flex items-center gap-1 text-[11px] text-[#7185a0] sm:text-xs">
+          <Icon className="shrink-0" name="pin" size={13} />
+          <span className="truncate">{store.location}</span>
         </div>
       </div>
     </Link>

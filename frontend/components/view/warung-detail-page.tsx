@@ -8,7 +8,8 @@ import { CartSheet } from "@/components/view/cart-sheet";
 import { CheckoutSheet } from "@/components/view/checkout-sheet";
 import { CartProvider, useCart } from "@/lib/cart-store";
 import { formatRupiah } from "@/lib/utils";
-import type { Store } from "@/lib/types";
+import { logoColor, logoInitials } from "@/lib/home-data";
+import type { Product, Store } from "@/lib/types";
 
 type Panel = "checkout" | null;
 
@@ -25,31 +26,7 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
   const [panel, setPanel] = React.useState<Panel>(null);
   const [openCart, setOpenCart] = React.useState(false);
 
-  const displayProducts: {
-    name: string;
-    price: string;
-    image: string;
-    logo: string;
-    logoColor: string;
-    /** Id seed — dipakai untuk menambah ke cart. */
-    seedId?: string;
-    /** false bila produk seed sudah habis. */
-    available?: boolean;
-  }[] = typedStore.products.map((p) => ({
-    name: p.name,
-    price: formatRupiah(p.price),
-    image:
-      p.image ||
-      `https://images.unsplash.com/photo-1504674900247-w088a7400f4d?auto=format&fit=crop&w=480&q=85`,
-    logo: typedStore.name
-      .split(" ")
-      .slice(0, 2)
-      .map((w) => w.charAt(0).toUpperCase())
-      .join(""),
-    logoColor: "#227bf3",
-    seedId: p.id,
-    available: p.available,
-  }));
+  const storeProducts = typedStore.products;
 
   const stats: {
     icon: IconName;
@@ -61,29 +38,13 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
     {
       icon: "basket",
       label: "Produk",
-      value: `${typedStore.products.length} item`,
+      value: `${storeProducts.length} item`,
       tint: "bg-secondary text-primary",
     },
   ];
 
-  function handleQuickAdd(product: (typeof displayProducts)[number]) {
-    if (product.seedId) {
-      const seedProduct = typedStore.products.find(
-        (p) => p.id === product.seedId,
-      );
-      if (seedProduct) {
-        cart.add(seedProduct, 1);
-        setOpenCart(true);
-        return;
-      }
-    }
-    cart.addRaw({
-      productId: product.seedId ?? `home-${product.name}`,
-      name: product.name,
-      unitPrice: parseInt(product.price.replace(/\D/g, ""), 10) || 0,
-      quantity: 1,
-      image: product.image,
-    });
+  function handleQuickAdd(product: Product) {
+    cart.add(product, 1);
     setOpenCart(true);
   }
 
@@ -108,22 +69,30 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
       >
         <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-blue-900/5">
           <div
-            className="h-32 bg-[#e8eff7] bg-cover bg-center sm:h-40 lg:h-48"
+            className="h-32 bg-[#e8eff7] sm:h-40 lg:h-48"
             role="img"
             aria-label={`Sampul ${typedStore.name}`}
           />
           <div className="px-4 pb-5 sm:px-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <span
-                className="-mt-10 grid size-20 shrink-0 place-items-center rounded-full border-4 border-white text-xl font-bold text-white shadow-sm sm:-mt-12 sm:size-24 sm:text-2xl"
-                style={{ backgroundColor: "#227bf3" }}
+                className="-mt-10 grid size-20 shrink-0 place-items-center overflow-hidden rounded-full border-4 border-white bg-[#e8eff7] text-xl font-bold text-white shadow-sm sm:-mt-12 sm:size-24 sm:text-2xl"
                 aria-hidden="true"
               >
-                {typedStore.name
-                  .split(" ")
-                  .slice(0, 2)
-                  .map((w) => w.charAt(0).toUpperCase())
-                  .join("")}
+                {typedStore.logo ? (
+                  <img
+                    src={typedStore.logo}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className="grid h-full w-full place-items-center text-center"
+                    style={{ backgroundColor: logoColor(typedStore.name) }}
+                  >
+                    {logoInitials(typedStore.name)}
+                  </span>
+                )}
               </span>
               <div className="min-w-0 flex-1 sm:pb-1">
                 <h1
@@ -210,47 +179,57 @@ function DetailPageInner({ typedStore }: { typedStore: Store }) {
         >
           Semua Produk{" "}
           <span className="text-xs font-semibold text-[#6f82a1]">
-            ({displayProducts.length} produk)
+            ({storeProducts.length} produk)
           </span>
         </h2>
-        {displayProducts.length === 0 ? (
+        {storeProducts.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-[#bcd6f5] bg-white/60 px-4 py-10 text-center text-sm text-[#7185a0]">
             Warung ini belum memiliki produk.
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-5">
-            {displayProducts.map((product) => (
+            {storeProducts.map((product) => (
               <div
-                key={product.seedId ?? product.name}
+                key={product.id}
                 className="relative min-w-0 overflow-hidden rounded-2xl border border-[#d9eaff] bg-white p-2 transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-900/10"
               >
                 <div
                   className="aspect-[1.2] rounded-xl bg-[#e7edf4] bg-cover bg-center"
-                  style={{ backgroundImage: `url("${product.image}")` }}
+                  style={
+                    product.image
+                      ? { backgroundImage: `url("${product.image}")` }
+                      : undefined
+                  }
                   role="img"
                   aria-label={product.name}
-                />
+                >
+                  {!product.image && (
+                    <div className="grid h-full w-full place-items-center">
+                      <Icon name="bag" size={28} className="text-[#a8bcce]" />
+                    </div>
+                  )}
+                </div>
                 <div className="px-1 pt-2 pb-1">
                   <h3 className="truncate text-xs font-semibold text-[#2c4669] sm:text-sm">
                     {product.name}
                   </h3>
                   <span className="block truncate text-xs text-[#506681] sm:text-sm">
-                    {product.price}
+                    {formatRupiah(product.price)}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleQuickAdd(product)}
-                    disabled={product.available === false}
+                    disabled={!product.available}
                     className={
                       "mt-2 flex h-9 w-full items-center justify-center gap-1 rounded-lg text-xs font-semibold transition " +
-                      (product.available === false
+                      (!product.available
                         ? "cursor-not-allowed bg-surface-muted text-text-subtle"
                         : "bg-primary text-white hover:bg-primary/90")
                     }
                     aria-label={`Tambah ${product.name} ke keranjang`}
                   >
                     <Plus size={14} />
-                    {product.available === false ? "Habis" : "Tambah"}
+                    {!product.available ? "Habis" : "Tambah"}
                   </button>
                 </div>
               </div>

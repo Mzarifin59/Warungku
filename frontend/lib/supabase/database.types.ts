@@ -44,8 +44,11 @@ export type Database = {
           name: string;
           slug: string;
           description: string | null;
+          location: string | null;
+          operation_hours: string | null;
           whatsapp_number: string;
           logo_url: string | null;
+          image_banner: string | null;
           status: "draft" | "published";
           created_at: string;
           updated_at: string;
@@ -56,8 +59,11 @@ export type Database = {
           name: string;
           slug: string;
           description?: string | null;
+          location?: string | null;
+          operation_hours?: string | null;
           whatsapp_number: string;
           logo_url?: string | null;
+          image_banner?: string | null;
           status?: "draft" | "published";
           created_at?: string;
           updated_at?: string;
@@ -68,8 +74,11 @@ export type Database = {
           name?: string;
           slug?: string;
           description?: string | null;
+          location?: string | null;
+          operation_hours?: string | null;
           whatsapp_number?: string;
           logo_url?: string | null;
+          image_banner?: string | null;
           status?: "draft" | "published";
           created_at?: string;
           updated_at?: string;

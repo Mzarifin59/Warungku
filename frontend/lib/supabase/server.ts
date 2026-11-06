@@ -2,8 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "./database.types";
 
-export async function createClient() {
-  const cookieStore = await cookies();
+type CookieLike = {
+  getAll(): { name: string; value: string }[];
+  set(name: string, value: string, options: { path: string }): void;
+};
+
+export function createClient() {
+  const cookieStore = cookies() as unknown as Promise<CookieLike>;
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,13 +16,16 @@ export async function createClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          // Promise<CookieLike> — supabase-js akan await hasil `getAll()`.
+          return (async () => (await cookieStore).getAll())();
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value }) =>
-              cookieStore.set(name, value, { path: "/" })
-            );
+            void cookieStore.then((store) => {
+              cookiesToSet.forEach(({ name, value }) =>
+                store.set(name, value, { path: "/" })
+              );
+            });
           } catch {
             // Dipanggil dari Server Component yang tidak punya akses
             // untuk set cookie - aman diabaikan karena middleware

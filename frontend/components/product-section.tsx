@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
-import { products, slugify } from "@/lib/home-data";
+import { logoColor, logoInitials, type ProductDisplay } from "@/lib/home-data";
 
 function quickAddLocal(
   slug: string,
@@ -34,20 +34,19 @@ function quickAddLocal(
 }
 
 function handleProductAdd(
-  product: (typeof products)[number],
+  product: ProductDisplay,
   router: ReturnType<typeof useRouter>,
 ) {
-  const slug = slugify(product.store);
-  quickAddLocal(slug, {
-    productId: `home-${slugify(product.name)}`,
+  quickAddLocal(product.slug, {
+    productId: product.id,
     name: product.name,
     unitPrice: parseInt(product.price.replace(/\D/g, ""), 10) || 0,
     image: product.image,
   });
-  router.push(`/warung/${slug}`);
+  router.push(`/warung/${product.slug}`);
 }
 
-export function ProductSection() {
+export function ProductSection({ products }: { products: ProductDisplay[] }) {
   const router = useRouter();
   return (
     <section
@@ -80,12 +79,17 @@ export function ProductSection() {
             key={product.name}
           >
             <a
-              className="block aspect-[1.2] rounded-[10px] bg-[#e7edf4] bg-cover bg-center"
+              className="block aspect-[1.2] overflow-hidden rounded-[10px] bg-[#e7edf4]"
               href="#"
-              style={{ backgroundImage: `url("${product.image}")` }}
-              role="img"
-              aria-label={product.name}
-            />
+            >
+              {product.image && (
+                <img
+                  src={product.image}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              )}
+            </a>
             <div className="px-px pt-2 pb-px">
               <a
                 className="block truncate text-xs font-semibold text-[#2c4669] sm:text-sm"
@@ -99,10 +103,10 @@ export function ProductSection() {
               <div className="mt-2 flex items-center gap-1.5 text-[10px] text-[#8292aa] sm:text-[11px]">
                 <span
                   className="grid size-6 shrink-0 place-items-center rounded-full border border-[#f1e5d9] text-[8px] font-bold text-white"
-                  style={{ backgroundColor: product.logoColor }}
+                  style={{ backgroundColor: logoColor(product.store) }}
                   aria-hidden="true"
                 >
-                  {product.logo}
+                  {logoInitials(product.store)}
                 </span>
                 <span className="truncate">{product.store}</span>
                 <button

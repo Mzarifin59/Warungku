@@ -3,23 +3,22 @@
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
 import { StoreCard } from "@/components/store-card";
-import { categories, stores } from "@/lib/home-data";
+import { categories, type StoreDisplay } from "@/lib/home-data";
 
-type Sort = "populer" | "rating" | "nama";
+type Sort = "nama" | "baru";
 
 const sortOptions: { value: Sort; label: string }[] = [
-  { value: "populer", label: "Paling Populer" },
-  { value: "rating", label: "Rating Tertinggi" },
+  { value: "baru", label: "Terbaru" },
   { value: "nama", label: "Nama (A–Z)" },
 ];
 
 const chipBase =
   "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-xs font-medium transition sm:text-sm";
 
-export function WarungExplorePage() {
+export function WarungExplorePage({ stores }: { stores: StoreDisplay[] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Semua");
-  const [sort, setSort] = useState<Sort>("populer");
+  const [sort, setSort] = useState<Sort>("baru");
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -29,17 +28,14 @@ export function WarungExplorePage() {
           (category === "Semua" || store.category === category) &&
           (!q ||
             store.name.toLowerCase().includes(q) ||
-            store.category.toLowerCase().includes(q) ||
-            store.location.toLowerCase().includes(q)),
+            store.category.toLowerCase().includes(q)),
       )
       .sort((a, b) =>
-        sort === "rating"
-          ? Number(b.rating) - Number(a.rating)
-          : sort === "nama"
-            ? a.name.localeCompare(b.name, "id")
-            : b.reviews - a.reviews,
+        sort === "nama"
+          ? a.name.localeCompare(b.name, "id")
+          : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-  }, [query, category, sort]);
+  }, [query, category, sort, stores]);
 
   return (
     <main>
