@@ -10,6 +10,7 @@ import {
   toSession,
   type LoginInput,
   type RegisterInput,
+  type RegisterResult,
 } from "./repos/auth-repo";
 
 /**
@@ -28,7 +29,7 @@ interface SessionContextValue {
   isAuthenticated: boolean;
   initializing: boolean;
   signIn: (input: LoginInput) => Promise<Session>;
-  signUp: (input: RegisterInput) => Promise<Session>;
+  signUp: (input: RegisterInput) => Promise<RegisterResult>;
   signOut: () => Promise<void>;
 }
 
@@ -68,9 +69,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = React.useCallback(async (input: RegisterInput) => {
-    const s = await repoRegister(input);
-    setSession(s);
-    return s;
+    const result = await repoRegister(input);
+    if (result.status === "signed-in") setSession(result.session);
+    return result;
   }, []);
 
   const signOut = React.useCallback(async () => {

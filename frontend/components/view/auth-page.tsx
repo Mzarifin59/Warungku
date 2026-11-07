@@ -6,7 +6,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MailCheck } from "lucide-react";
 import { useSession } from "@/lib/session-store";
+import { EmailNotConfirmedError, resendConfirmation } from "@/lib/repos/auth-repo";
 import {
   loginSchema,
   registerSchema,
@@ -35,6 +37,10 @@ export function AuthPage({ mode }: AuthPageProps) {
   const [submitting, setSubmitting] = React.useState(false);
   const [fieldErrors, setFieldErrors] = React.useState<FieldErrorMap>({});
   const [generalError, setGeneralError] = React.useState("");
+  /** Email yang menunggu konfirmasi (setelah daftar / login belum dikonfirmasi). */
+  const [pendingEmail, setPendingEmail] = React.useState("");
+  const [registered, setRegistered] = React.useState(false);
+  const linkError = CONFIRM_ERRORS[searchParams.get("error") ?? ""];
 
   const [form, setForm] = React.useState({
     name: "",
@@ -74,19 +80,25 @@ export function AuthPage({ mode }: AuthPageProps) {
     }
 
     setSubmitting(true);
+    setPendingEmail("");
     try {
       if (isLogin) {
         const input = parsed.data as unknown as LoginInput;
         await signIn(input);
-        router.replace(nextParam);
-        router.refresh();
       } else {
         const input = parsed.data as unknown as RegisterInput;
-        await signUp(input);
-        router.replace(nextParam);
-        router.refresh();
+        const result = await signUp(input);
+        if (result.status === "confirm-email") {
+          setPendingEmail(result.email);
+          setRegistered(true);
+          setSubmitting(false);
+          return;
+        }
       }
+      router.replace(nextParam);
+      router.refresh();
     } catch (err) {
+      if (err instanceof EmailNotConfirmedError) setPendingEmail(form.email.trim());
       setGeneralError(err instanceof Error ? err.message : "Terjadi kesalahan. Coba lagi.");
       setSubmitting(false);
     }
@@ -126,12 +138,23 @@ export function AuthPage({ mode }: AuthPageProps) {
             {isLogin ? "Selamat Datang Kembali!" : "Buat Toko Gratis"}
           </h2>
 
+          {registered ? (
+            <CheckEmailPanel email={pendingEmail} />
+          ) : (
+          <>
+          {linkError && !generalError && (
+            <div className="mb-4 rounded-lg bg-warning-subtle px-3 py-2 text-sm text-warning" role="status">
+              {linkError}
+            </div>
+          )}
+
           {generalError && (
             <div
               className="mb-4 rounded-lg bg-danger-subtle px-3 py-2 text-sm text-danger"
               role="alert"
             >
               {generalError}
+              {pendingEmail && <ResendButton email={pendingEmail} className="mt-2" />}
             </div>
           )}
 
@@ -249,6 +272,8 @@ export function AuthPage({ mode }: AuthPageProps) {
               </>
             )}
           </p>
+          </>
+          )}
         </section>
       </main>
     </div>
@@ -256,6 +281,88 @@ export function AuthPage({ mode }: AuthPageProps) {
 }
 
 /* ── Sub-komponen ──────────────────────────────────────────── */
+
+/** Pesan untuk `/login?error=...` dari `app/auth/confirm/route.ts`. */
+const CONFIRM_ERRORS: Record<string, string> = {
+  kedaluwarsa:
+    "Link konfirmasi sudah kedaluwarsa atau sudah dipakai. Coba masuk; bila email belum terkonfirmasi, kirim ulang emailnya.",
+  konfirmasi:
+    "Link konfirmasi tidak bisa dipakai otomatis di browser ini. Email kamu kemungkinan sudah terkonfirmasi — silakan masuk.",
+};
+
+const RESEND_COOLDOWN_S = 60;
+
+function ResendButton({ email, className }: { email: string; className?: string }) {
+  const [cooldown, setCooldown] = React.useState(0);
+  const [status, setStatus] = React.useState<{ ok: boolean; text: string } | null>(null);
+  const [sending, setSending] = React.useState(false);
+
+  React.useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => window.clearTimeout(t);
+  }, [cooldown]);
+
+  async function resend() {
+    setSending(true);
+    setStatus(null);
+    try {
+      await resendConfirmation(email);
+      setStatus({ ok: true, text: `Email konfirmasi dikirim ulang ke ${email}.` });
+      setCooldown(RESEND_COOLDOWN_S);
+    } catch (err) {
+      setStatus({ ok: false, text: err instanceof Error ? err.message : "Gagal mengirim ulang." });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        onClick={() => void resend()}
+        disabled={sending || cooldown > 0}
+        className="text-sm font-semibold text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-text-subtle disabled:no-underline"
+      >
+        {sending
+          ? "Mengirim…"
+          : cooldown > 0
+            ? `Kirim ulang dalam ${cooldown} dtk`
+            : "Kirim ulang email konfirmasi"}
+      </button>
+      {status && (
+        <p className={`mt-1 text-xs ${status.ok ? "text-success" : "text-danger"}`} role="status">
+          {status.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CheckEmailPanel({ email }: { email: string }) {
+  return (
+    <div className="space-y-4 text-center">
+      <span className="mx-auto grid size-14 place-items-center rounded-full bg-secondary text-primary">
+        <MailCheck size={26} aria-hidden="true" />
+      </span>
+      <div>
+        <p className="font-semibold text-[#263e60]">Cek email kamu</p>
+        <p className="mt-1 text-sm text-[#6f82a1]">
+          Kami mengirim link konfirmasi ke <strong className="text-[#263e60]">{email}</strong>.
+          Buka link itu <strong>di perangkat & browser ini</strong> agar langsung masuk ke dashboard.
+        </p>
+        <p className="mt-2 text-xs text-[#8794a5]">
+          Tidak ada di kotak masuk? Periksa folder Spam / Promosi.
+        </p>
+      </div>
+      <ResendButton email={email} />
+      <Link href="/login" className="block text-sm text-[#6f82a1] hover:text-primary">
+        Sudah konfirmasi? Masuk di sini
+      </Link>
+    </div>
+  );
+}
 
 function FieldBlock({
   label,

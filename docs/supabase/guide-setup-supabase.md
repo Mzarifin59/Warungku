@@ -34,9 +34,32 @@ Ikuti langkah berikut:
    - Kalau belum, klik Email lalu aktifkan
 
 2. Klik **URL Configuration**
-   - **Site URL**: isi `https://warungku-q91iy2fef-rifky-arifins-projects.vercel.app`
-   - **Redirect URLs**: tambahkan `https://warungku-q91iy2fef-rifky-arifins-projects.vercel.app`
-   - (Opsional, untuk dev lokal) tambahkan juga `http://localhost:3000`
+   - **Site URL**: URL produksi (domain Vercel yang tetap, mis.
+     `https://warungku.vercel.app`). Ini dipakai sebagai **cadangan** bila
+     alamat redirect dari aplikasi tidak ada di daftar izin.
+   - **Redirect URLs** — tambahkan SEMUA dengan akhiran `/**` (wildcard
+     path). Tanpa `/**`, `http://localhost:3000/auth/confirm` dianggap tidak
+     cocok dan Supabase melempar user ke Site URL (Vercel):
+     ```
+     http://localhost:3000/**
+     https://warungku.vercel.app/**
+     https://*-rifky-arifins-projects.vercel.app/**
+     ```
+     Baris ketiga untuk preview deployment Vercel (URL-nya berubah tiap
+     deploy).
+   - Aplikasi mengirim alamat callback otomatis sesuai tempat user mendaftar
+     (`{origin}/auth/confirm`, lihat `frontend/lib/repos/auth-repo.ts`),
+     jadi daftar dari localhost → link email kembali ke localhost.
+
+   **(Opsional, disarankan) Template email agar link bisa dibuka di perangkat
+   lain.** Link bawaan (`{{ .ConfirmationURL }}`) memakai alur PKCE yang
+   hanya bisa login otomatis di browser yang sama saat mendaftar. Untuk
+   mendukung buka link dari HP lain: **Authentication → Emails → Confirm
+   signup**, ganti link menjadi:
+   ```html
+   <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Konfirmasi email</a>
+   ```
+   Route `frontend/app/auth/confirm/route.ts` menangani kedua bentuk link.
 
 3. (Opsional - untuk demo lebih mulus) Klik **Policies**
    - Cari policy **Confirm sign up** (di section Authentication)
