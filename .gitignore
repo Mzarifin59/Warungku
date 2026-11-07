@@ -1,0 +1,18 @@
+# Rahasia & konfigurasi lokal (berlaku untuk seluruh repo)
+.env*
+!.env.example
+*.pem
+*.key
+
+# Vercel CLI
+.vercel
+
+# Supabase CLI (file kerja lokal; migrasi & seed tetap di-commit)
+supabase/.temp/
+supabase/.branches/
+supabase/.env*
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.log

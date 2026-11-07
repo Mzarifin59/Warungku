@@ -31,7 +31,10 @@ Supabase
 
 ## Skema Database
 
-Jalankan semua SQL berikut di Supabase SQL Editor satu kali saat setup.
+> **Sumber resmi SQL sekarang ada di
+> [`supabase/migrations/`](../../supabase/migrations)** (bagian 1–11 di bawah
+> = `20261103000000_initial_schema.sql`). SQL di bawah disimpan sebagai
+> referensi desain; bila berbeda, file migrasi yang berlaku.
 
 ### 1. Tabel profiles (extensi dari auth.users)
 
@@ -228,7 +231,7 @@ Penggantian bertahap tanpa mengubah UI:
 
 ## Environment Variables
 
-File: `frontend/.env.local` (JANGAN commit ke git)
+File: `web/.env.local` (JANGAN commit ke git)
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
@@ -245,10 +248,10 @@ Dapatkan dari: Supabase Dashboard > Settings > API
 - [x] Tulis dokumen plan ini
 - [x] Buat project Supabase di `dashboard.supabase.com`
 - [x] Jalankan SQL di atas di Supabase SQL Editor
-- [x] `bun add @supabase/supabase-js @supabase/ssr` di `frontend/`
-- [x] Buat `frontend/lib/supabase/client.ts` (browser client)
-- [x] Buat `frontend/lib/supabase/server.ts` (server client + cookies)
-- [x] Buat `frontend/proxy.ts` untuk refresh token (Next 16: `middleware.ts` → `proxy.ts`)
+- [x] `bun add @supabase/supabase-js @supabase/ssr` di `web/`
+- [x] Buat `web/lib/supabase/client.ts` (browser client)
+- [x] Buat `web/lib/supabase/server.ts` (server client + cookies)
+- [x] Buat `web/proxy.ts` untuk refresh token (Next 16: `middleware.ts` → `proxy.ts`)
 - [x] Tambahkan `.env.local` (jangan commit ke git)
 
 ### Fase B - Auth
@@ -267,15 +270,17 @@ Dapatkan dari: Supabase Dashboard > Settings > API
 - [x] Tambah kategori
 
 ### Fase E - Cleanup
-- [ ] Hapus `seed-data.ts` (atau simpan sebagai fallback)
+- [x] Hapus `seed-data.ts` (atau simpan sebagai fallback)
+- [x] Hapus folder `backend/` (Laravel) — digantikan Supabase
 - [ ] Tes end-to-end: register -> buat toko -> tambah produk -> publik bisa lihat
 - [x] `bun run lint && bun run build`
 
 ## Migrasi lanjutan
 
 Setelah skema di atas, jalankan juga
-[`migrations/001-dashboard-mitra.sql`](./migrations/001-dashboard-mitra.sql):
-kolom tambahan `stores`, policy baca publik `categories`, RPC
+[`supabase/migrations/20261106000000_dashboard_mitra.sql`](../../supabase/migrations/20261106000000_dashboard_mitra.sql):
+kolom tambahan `stores`, policy baca publik `categories`, policy
+`products_owner_read` (pemilik toko draft bisa membaca produknya), RPC
 `is_slug_available`, trigger `updated_at`, bucket `store-images` dengan
 policy per-folder user, dan index. **Tanpa migrasi ini kategori tidak tampil
 di halaman publik dan upload gambar gagal.**

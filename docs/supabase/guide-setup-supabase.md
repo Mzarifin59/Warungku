@@ -48,7 +48,7 @@ Ikuti langkah berikut:
      Baris ketiga untuk preview deployment Vercel (URL-nya berubah tiap
      deploy).
    - Aplikasi mengirim alamat callback otomatis sesuai tempat user mendaftar
-     (`{origin}/auth/confirm`, lihat `frontend/lib/repos/auth-repo.ts`),
+     (`{origin}/auth/confirm`, lihat `web/lib/repos/auth-repo.ts`),
      jadi daftar dari localhost → link email kembali ke localhost.
 
    **(Opsional, disarankan) Template email agar link bisa dibuka di perangkat
@@ -59,7 +59,7 @@ Ikuti langkah berikut:
    ```html
    <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=email">Konfirmasi email</a>
    ```
-   Route `frontend/app/auth/confirm/route.ts` menangani kedua bentuk link.
+   Route `web/app/auth/confirm/route.ts` menangani kedua bentuk link.
 
 3. (Opsional - untuk demo lebih mulus) Klik **Policies**
    - Cari policy **Confirm sign up** (di section Authentication)
@@ -72,15 +72,25 @@ Ikuti langkah berikut:
 
 ## 3. Jalankan SQL Setup
 
-1. Di dashboard Supabase, klik menu **SQL Editor** di sidebar kiri
-2. Klik "New query"
-3. Copy-paste SQL dari `plan.md` bagian "Skema Database":
-   - Bagian 1 sampai 11 (semua tabel, RLS, policies, trigger, storage)
-4. Klik "Run" (ikon play)
-5. Pastikan output menunjukkan "success" tanpa error
+Semua SQL ada di folder [`supabase/migrations/`](../../supabase/migrations)
+di root repo. Jalankan **berurutan sesuai nama file** (nama diawali tanggal):
 
-> Tips: jalankan per bagian (1, 2, 3, ...) agar jika ada error, lebih
-> mudah tahu mana yang gagal.
+| Urutan | File | Isi |
+|---|---|---|
+| 1 | `20261103000000_initial_schema.sql` | Tabel, RLS, trigger profil, bucket gambar |
+| 2 | `20261106000000_dashboard_mitra.sql` | Kolom tambahan, policy kategori & produk, RPC slug, `updated_at`, policy Storage per-folder, index |
+
+Cara menjalankan:
+1. Di dashboard Supabase, klik menu **SQL Editor** di sidebar kiri
+2. Klik "New query", copy-paste isi file pertama, klik "Run"
+3. Ulangi untuk file berikutnya
+4. Pastikan output menunjukkan "success" tanpa error
+
+> File 2 aman dijalankan berulang. File 1 hanya untuk database kosong
+> (memakai `create table` biasa).
+>
+> Format nama file mengikuti Supabase CLI, jadi bisa juga dijalankan dengan
+> `supabase db push` bila nanti memakai CLI.
 
 ### Verifikasi
 
@@ -100,7 +110,7 @@ Buka tab **Policies** dan pastikan policies sudah ada di setiap tabel.
 3. Isi:
    - **Bucket name**: `store-images`
    - **Public bucket**: CHECK (aktifkan) - supaya gambar bisa diakses publik
-4. (Sudah otomatis dibuat juga via SQL di bagian 11 plan.md - skip bila sudah)
+4. (Sudah otomatis dibuat oleh file migrasi di langkah 3 - skip bila sudah)
 
 ## 5. Dapatkan API Keys
 
@@ -144,7 +154,7 @@ Ikuti langkah berikut:
 
 ## 6. Setup Environment Variables di Frontend
 
-Buat file `frontend/.env.local` (jangan commit ke git):
+Buat file `web/.env.local` (jangan commit ke git):
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
@@ -168,7 +178,7 @@ SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 
 ## 7. Install Dependencies
 
-Dari folder `frontend/`:
+Dari folder `web/`:
 
 ```bash
 bun add @supabase/supabase-js @supabase/ssr
@@ -177,9 +187,14 @@ bun add -d @types/node
 
 ## 8. Struktur File Supabase Client
 
-Buat file-file berikut di `frontend/lib/supabase/`:
+> **Catatan:** file-file di bagian ini **sudah ada di repo** (`web/lib/supabase/*`,
+> `web/proxy.ts`). Bagian ini hanya referensi cara kerjanya — tidak perlu
+> dibuat ulang. Di Next 16, `middleware.ts` diganti nama menjadi `proxy.ts`
+> (fungsi `proxy`), lihat `web/proxy.ts` untuk versi terbaru.
 
-### 8.1 `frontend/lib/supabase/client.ts`
+Buat file-file berikut di `web/lib/supabase/`:
+
+### 8.1 `web/lib/supabase/client.ts`
 
 Client untuk browser-side (dipanggil dari components dan lib):
 
@@ -195,7 +210,7 @@ export function createClient() {
 }
 ```
 
-### 8.2 `frontend/lib/supabase/server.ts`
+### 8.2 `web/lib/supabase/server.ts`
 
 Client untuk server-side (dipanggil dari Server Components dan route handlers):
 
@@ -231,7 +246,7 @@ export async function createClient() {
 }
 ```
 
-### 8.3 `frontend/middleware.ts`
+### 8.3 `web/proxy.ts` (dulu `middleware.ts`)
 
 Middleware untuk refresh session (jangan duplikat jika sudah ada middleware):
 
@@ -280,7 +295,7 @@ export async function updateSession(request: NextRequest) {
 }
 ```
 
-### 8.4 `frontend/lib/supabase/database.types.ts`
+### 8.4 `web/lib/supabase/database.types.ts`
 
 Generasi otomatis dari Supabase (biarkan kosong dulu, generate nanti):
 
@@ -317,7 +332,7 @@ Ada 2 cara untuk mengisi data dummy:
 File: `docs/supabase/seed.sql`
 
 1. Di Supabase Dashboard, buka **Edits SQL** (ikon `</>` di sidebar)
-2. Buka file `seed.sql` dan copy-paste seluruh isinya
+2. Buka file [`supabase/seed.sql`](../../supabase/seed.sql) dan copy-paste seluruh isinya
 3. **Penting**: pastikan SQL Editor berjalan sebagai role **`postgres`**
    (superuser), bukan `anon`. Klik dropdown role di pojok kanan atas
    query editor → pilih `postgres`.
@@ -363,24 +378,25 @@ Sebelum lanjut ke Fase B (ganti auth-repo), pastikan:
 | `Supabase url is not set` | `.env.local` belum dibuat / tidak di-load | Restart `bun dev` setelah bikin `.env.local` |
 | `relation "public.stores" does not exist` | SQL belum dijalankan | Jalankan semua SQL di SQL Editor |
 | `new row violates row-level security` | Policy RLS tidak pas | Cek policy di Table Editor > Policies |
-| Register sukses tapi `profiles` kosong | Trigger belum aktif | Jalankan bagian 10 SQL dari plan.md |
+| Register sukses tapi `profiles` kosong | Trigger belum aktif | Jalankan ulang bagian 10 di `supabase/migrations/20261103000000_initial_schema.sql` |
+| "Tidak punya akses" saat tambah produk | Migrasi 2 belum dijalankan (policy `products_owner_read`) | Jalankan `supabase/migrations/20261106000000_dashboard_mitra.sql` |
 | `service_role` tidak di server | `SUPABASE_SERVICE_ROLE_KEY` tidak di `.env.local` | Tambahkan di `.env.local` |
 | Gambar tidak tampil | Storage bucket belum public | Aktifkan "Public bucket" di Storage settings |
 
-## 13. Daftar File yang Akan Diubah (ringkasan)
+## 13. Daftar File Integrasi (sudah ada di repo)
 
 Buat baru:
-- `frontend/lib/supabase/client.ts`
-- `frontend/lib/supabase/server.ts`
-- `frontend/lib/supabase/database.types.ts`
-- `frontend/middleware.ts` (update jika sudah ada)
-- `frontend/.env.local` (jangan commit)
+- `web/lib/supabase/client.ts`
+- `web/lib/supabase/server.ts`
+- `web/lib/supabase/database.types.ts`
+- `web/proxy.ts` (dulu `middleware.ts`)
+- `web/.env.local` (jangan commit)
 
 Modifikasi:
-- `frontend/lib/repos/auth-repo.ts`
-- `frontend/lib/repos/store-repo.ts`
-- `frontend/lib/repos/product-repo.ts`
-- `frontend/lib/session-store.tsx`
+- `web/lib/repos/auth-repo.ts`
+- `web/lib/repos/store-repo.ts`
+- `web/lib/repos/product-repo.ts`
+- `web/lib/session-store.tsx`
 
 ## 14. Security Notes
 
