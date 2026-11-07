@@ -1,32 +1,46 @@
 # Warungku
 
-Warungku is a marketplace for Indonesian UMKM (micro, small, and medium-sized
-businesses). It helps customers discover local shops and products, while giving
-sellers a simple way to manage their online storefronts.
+Katalog digital untuk UMKM Indonesia. Setiap warung punya halaman publik
+`/warung/{slug}`; pembeli memilih produk lalu mengirim pesanan terstruktur
+lewat WhatsApp. Pemilik warung mengelola toko & katalog dari dashboard
+sederhana.
 
-## Repository layout
+## Struktur repo
 
-- `frontend/` — Next.js App Router application and the marketplace homepage.
-- `backend/` — Laravel application and API foundation.
+```
+web/                 Aplikasi Next.js (App Router) — publik, dashboard mitra, auth
+supabase/
+  migrations/        Skema database (SQL) — jalankan berurutan sesuai nama file
+  seed.sql           Data demo (3 warung + akun demo)
+docs/
+  web/               Spesifikasi produk & desain, DECISIONS.md
+  supabase/          Rencana integrasi & panduan setup Supabase
+```
 
-The current homepage uses frontend mock data; it is not yet connected to the
-backend catalog or ordering flows.
+Backend = **Supabase** (Postgres + Auth + Storage + RLS). Tidak ada server
+API terpisah; aplikasi `web/` memanggil Supabase langsung.
 
-## Frontend
+## Menjalankan secara lokal
 
-See [frontend/README.md](frontend/README.md) for setup, scripts, directory
-structure, and design-system details.
+1. Siapkan project Supabase dan jalankan SQL di `supabase/migrations/`
+   (panduan lengkap: [docs/supabase/guide-setup-supabase.md](docs/supabase/guide-setup-supabase.md)).
+2. Salin `web/.env.example` menjadi `web/.env.local`, isi URL & key Supabase.
+3. Dari folder `web/`:
+   ```sh
+   bun install
+   bun run dev
+   ```
+   Buka [http://localhost:3000](http://localhost:3000).
 
-From `frontend/`, run `bun run dev` and open [http://localhost:3000](http://localhost:3000).
-Run `bun run lint` and `bun run build` there to validate frontend changes.
+Validasi perubahan: `bun run lint` dan `bun run build` dari `web/`.
 
-## Guidance for AI coding agents
+Akun demo (setelah `supabase/seed.sql` dijalankan, sandi `demo1234`):
+`demo-roti@warungku.id`, `demo-dapur@warungku.id`, `demo-keripik@warungku.id`.
 
-- Read [frontend/AGENTS.md](frontend/AGENTS.md) before changing the frontend and
-  [backend/AGENTS.md](backend/AGENTS.md) before changing the backend.
-- Keep frontend mock catalog content in `frontend/lib/` and reusable UI in
-  `frontend/components/`.
-- Preserve the frontend design tokens: Poppins, primary `#227BF3`, and
-  secondary `#DBEDFF`.
-- Validate frontend changes with the focused lint/build scripts in the frontend
-  package.
+## Deploy (Vercel)
+
+Root Directory project Vercel harus `web`.
+
+## Untuk AI coding agent
+
+Baca [AGENTS.md](AGENTS.md) terlebih dahulu.
