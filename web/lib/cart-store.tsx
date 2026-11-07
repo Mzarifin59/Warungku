@@ -72,18 +72,66 @@ export function addToStoredCart(
   item: Omit<CartItem, "quantity">,
 ) {
   const key = STORAGE_PREFIX + slug;
-  const items = readStorage(key);
-  const existing = items.find((i) => i.productId === item.productId);
-  writeStorage(
-    key,
-    existing
+  updateCart(key, (items) => {
+    const existing = items.find((i) => i.productId === item.productId);
+    return existing
       ? items.map((i) =>
           i.productId === item.productId
             ? { ...i, quantity: Math.min(i.quantity + 1, CART_QTY_MAX) }
             : i,
         )
-      : [...items, { ...item, quantity: 1 }],
-  );
+      : [...items, { ...item, quantity: 1 }];
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Store eksternal per warung (localStorage + cache memori)            */
+/* ------------------------------------------------------------------ */
+// Dibaca lewat useSyncExternalStore: saat SSR & hydration keranjang
+// dianggap kosong (sama dengan HTML server), lalu terisi dari storage —
+// mencegah hydration mismatch. Bonus: sinkron antar-tab via event `storage`.
+
+const EMPTY_CART: CartItem[] = [];
+const cartCache = new Map<string, CartItem[]>();
+const cartListeners = new Map<string, Set<() => void>>();
+
+function getCart(key: string): CartItem[] {
+  let items = cartCache.get(key);
+  if (!items) {
+    items = readStorage(key);
+    cartCache.set(key, items);
+  }
+  return items;
+}
+
+function emit(key: string) {
+  cartListeners.get(key)?.forEach((listener) => listener());
+}
+
+function updateCart(key: string, updater: (items: CartItem[]) => CartItem[]) {
+  const next = updater(getCart(key));
+  cartCache.set(key, next);
+  writeStorage(key, next);
+  emit(key);
+}
+
+function subscribeCart(key: string, listener: () => void) {
+  let set = cartListeners.get(key);
+  if (!set) {
+    set = new Set();
+    cartListeners.set(key, set);
+  }
+  set.add(listener);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== key) return;
+    cartCache.delete(key); // tab lain mengubah keranjang → baca ulang
+    listener();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    set.delete(listener);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 export interface CartContextValue {
@@ -113,13 +161,15 @@ export function CartProvider({
   children: React.ReactNode;
 }) {
   const storageKey = STORAGE_PREFIX + slug;
-  const [items, setItems] = React.useState<CartItem[]>(() =>
-    readStorage(storageKey),
+  const items = React.useSyncExternalStore(
+    React.useCallback((listener) => subscribeCart(storageKey, listener), [storageKey]),
+    () => getCart(storageKey),
+    () => EMPTY_CART,
   );
-
-  React.useEffect(() => {
-    writeStorage(storageKey, items);
-  }, [storageKey, items]);
+  const setItems = React.useCallback(
+    (updater: (prev: CartItem[]) => CartItem[]) => updateCart(storageKey, updater),
+    [storageKey],
+  );
 
   const total = React.useMemo(
     () => items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
@@ -177,8 +227,8 @@ export function CartProvider({
       },
       remove: (productId) =>
         setItems((prev) => prev.filter((i) => i.productId !== productId)),
-      clear: () => setItems([]),
-      syncItems: (next) => setItems(next),
+      clear: () => setItems(() => []),
+      syncItems: (next) => setItems(() => next),
       /**
        * Tambah item mentah langsung (bukan dari `Product` seed). Dipakai
        * untuk handoff dari kartu produk lintas warung.
@@ -197,7 +247,7 @@ export function CartProvider({
         });
       },
     }),
-    [slug, items, count, total],
+    [slug, items, count, total, setItems],
   );
 
   return <CartContext.Provider value={api}>{children}</CartContext.Provider>;

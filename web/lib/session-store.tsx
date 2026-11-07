@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Session } from "./types";
+import { useHydrated } from "./use-hydrated";
 import {
   login as repoLogin,
   register as repoRegister,
@@ -98,10 +99,25 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Session untuk komponen. Selama komponen pemanggil sedang di-hydrate,
+ * nilainya sama dengan di server (belum login, `initializing: true`) agar
+ * HTML cocok; setelah itu berisi session sebenarnya.
+ *
+ * Penting karena `SessionProvider` (di luar `<Suspense>`) sering sudah
+ * membaca session sebelum komponen di dalam boundary selesai hydrate.
+ */
 export function useSession(): SessionContextValue {
   const ctx = React.useContext(SessionContext);
   if (!ctx) {
     throw new Error("useSession harus dipakai di dalam <SessionProvider>.");
   }
-  return ctx;
+  const hydrated = useHydrated();
+  return React.useMemo(
+    () =>
+      hydrated
+        ? ctx
+        : { ...ctx, session: null, isAuthenticated: false, initializing: true },
+    [ctx, hydrated],
+  );
 }
