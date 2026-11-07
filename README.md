@@ -23,7 +23,7 @@ API terpisah; aplikasi `web/` memanggil Supabase langsung.
 ## Menjalankan secara lokal
 
 1. Siapkan project Supabase dan jalankan SQL di `supabase/migrations/`
-   (panduan lengkap: [docs/supabase/guide-setup-supabase.md](docs/supabase/guide-setup-supabase.md)).
+   (panduan lengkap: [supabase/README.md](supabase/README.md)).
 2. Salin `web/.env.example` menjadi `web/.env.local`, isi URL & key Supabase.
 3. Dari folder `web/`:
    ```sh

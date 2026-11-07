@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Card — latar surface, border, radius lg, padding 16 (docs 02 §7).
+ * Card — latar surface, border, radius lg, padding 16.
  * Bisa menjadi link (kartu yang bisa diklik: hover shadow-sm + border
  * strong, focus-visible ring).
  */

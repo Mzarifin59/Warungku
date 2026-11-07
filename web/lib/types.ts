@@ -1,12 +1,11 @@
 /**
- * Domain types — WarungKu Fase 1 (mock data).
+ * Domain types — WarungKu.
  *
- * Semua uang disimpan sebagai integer Rupiah (lihat docs/web/02 §2:
- * "Rupiah = integer"). Jangan pernah simpan sebagai `float`/desimal.
+ * Semua uang disimpan sebagai integer Rupiah. Jangan pernah simpan sebagai
+ * `float`/desimal.
  *
- * Tipe di sini adalah kontrak untuk mock data (`lib/*-data.ts`) dan nanti
- * repository backend (Fase 2). Lihat docs/web/09-types-and-mock-data.md
- * (belum ditulis) — saat ini sumbernya adalah docs/web/01–05.
+ * Tipe di sini adalah kontrak domain yang dipakai UI; baris Supabase
+ * dipetakan ke tipe ini lewat `lib/supabase/mappers.ts`.
  */
 
 /** Kategori produk dalam satu toko. */

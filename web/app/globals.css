@@ -1,13 +1,12 @@
 @import "tailwindcss";
 
 /*
- * Design tokens WarungKu (Fase 1 — mock data).
+ * Design tokens WarungKu — acuan desain utama aplikasi.
  * Brand tetap: primary #227BF3 + font Poppins (sesuai keputusan proyek).
- * Token semantik & netral mengikuti docs/web/02-design-system.md.
  */
 
 @theme {
-  /* Netral (stone) — docs 02 §2.2 */
+  /* Netral (stone) */
   --color-bg: #fafaf9;
   --color-surface: #ffffff;
   --color-surface-muted: #f5f5f4;
@@ -17,7 +16,7 @@
   --color-text-muted: #57534e;
   --color-text-subtle: #78716c;
 
-  /* Semantik — docs 02 §2.3 */
+  /* Semantik */
   --color-success: #15803d;
   --color-success-subtle: #dcfce7;
   --color-warning: #b45309;
@@ -27,7 +26,7 @@
   --color-info: #1d4ed8;
   --color-info-subtle: #dbeafe;
 
-  /* WhatsApp — docs 02 §2.1 */
+  /* WhatsApp */
   --color-whatsapp: #15803d;
   --color-whatsapp-hover: #166534;
   --color-whatsapp-subtle: #dcfce7;

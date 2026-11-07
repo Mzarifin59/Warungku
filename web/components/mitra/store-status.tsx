@@ -10,7 +10,7 @@ import { normalizeWhatsApp } from "@/lib/constants";
 import { setStoreStatus } from "@/lib/supabase/mutations";
 import type { Store } from "@/lib/types";
 
-/** Alasan toko belum boleh terbit (docs 04 F1), atau `null` bila boleh. */
+/** Alasan toko belum boleh terbit, atau `null` bila boleh. */
 export function publishBlocker(store: Store): string | null {
   if (!normalizeWhatsApp(store.whatsappNumber))
     return "Isi nomor WhatsApp yang valid untuk menerbitkan warung.";
@@ -105,7 +105,7 @@ export function PublishCard({ store }: { store: Store }) {
 
 const noopSubscribe = () => () => {};
 
-/** Kartu link warung: salin, bagikan ke WhatsApp, lihat (docs 04 F1). */
+/** Kartu link warung: salin, bagikan ke WhatsApp, lihat. */
 export function ShareLinkCard({ store }: { store: Store }) {
   const [copied, setCopied] = React.useState(false);
   const origin = React.useSyncExternalStore(

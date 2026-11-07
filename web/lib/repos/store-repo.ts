@@ -5,7 +5,7 @@
  * RLS Supabase yang berlaku:
  * - `stores`: publik hanya melihat `status = 'published'`.
  * - `products` & `categories`: publik hanya melihat milik toko terbit
- *   (lihat docs/supabase/migrations/001-dashboard-mitra.sql).
+ *   (lihat supabase/migrations/20261106000000_dashboard_mitra.sql).
  *
  * Mutasi & data dashboard mitra ada di `lib/supabase/mutations.ts` dan
  * `lib/dashboard-provider.tsx` (client).

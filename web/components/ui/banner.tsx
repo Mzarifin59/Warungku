@@ -18,7 +18,7 @@ const toneIcon: Record<Tone, string> = {
 };
 
 /**
- * Banner data / error — untuk data error (docs 05 pola lintas layar):
+ * Banner data / error — untuk data error:
  * "banner danger-subtle dengan ikon, pesan singkat, tombol 'Coba lagi'".
  */
 export function Banner({

@@ -26,25 +26,14 @@ currently Next `16.4.3`, React 19) containing:
 - Auth: login, register, email confirmation callback (`/auth/confirm`)
 
 Data & auth come from **Supabase** (browser + server clients in
-`lib/supabase/`), authorized by RLS. Supabase integration was approved
-after the docs were written — see `../docs/web/DECISIONS.md`. The
-"FORBIDDEN in Phase 1" list in `../docs/web/AGENTS.md` no longer applies to
-network calls / Supabase; its UI and accessibility rules still do.
+`lib/supabase/`), authorized by RLS.
 
-## 2. Design docs — read before changing UI
+## 2. Design
 
-| Need | Read |
-|---|---|
-| Product context, personas, UX principles | [01-product-brief.md](../docs/web/01-product-brief.md) |
-| Color tokens, typography, spacing, component styles | [02-design-system.md](../docs/web/02-design-system.md) |
-| Sitemap, route list, render strategy | [03-information-architecture.md](../docs/web/03-information-architecture.md) |
-| User flows & edge cases | [04-user-flows.md](../docs/web/04-user-flows.md) |
-| Per-screen specs (layout, states, actions) | [05-screen-specs.md](../docs/web/05-screen-specs.md) |
-| Decisions overriding / extending the docs | [DECISIONS.md](../docs/web/DECISIONS.md) |
-
-Docs 06–11 referenced elsewhere were never written — do NOT invent their
-content; ask the user. Color/font conflict between docs and code: see root
-`AGENTS.md` section 5 (ask before touching).
+The existing code is the source of truth for design: tokens in
+`app/globals.css`, current components and screens. Past product/design
+decisions are logged in [DECISIONS.md](../docs/web/DECISIONS.md) — read it
+before changing behavior, and add new decisions there.
 
 ## 3. Conventions
 
@@ -68,6 +57,6 @@ content; ask the user. Color/font conflict between docs and code: see root
 
 ## 4. Definition of done
 
-Matches `../docs/web/05-screen-specs.md` (or a recorded decision), handles
+Consistent with the existing screens and `../docs/web/DECISIONS.md`, handles
 loading / empty / error / filled states, responsive at 360/768/1280px,
 accessible labels, and `bun run lint` + `bun run build` pass.

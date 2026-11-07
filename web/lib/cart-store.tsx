@@ -12,9 +12,9 @@ export type { CartItem };
  *
  *
  * - Tersimpan per slug toko di `localStorage` (keys:
- *   `warungku.cart.{slug}`), bertahan setelah refresh (docs 04 F4).
+ *   `warungku.cart.{slug}`), bertahan setelah refresh.
  * - Bila `localStorage` tak tersedia (mode privat) → berjalan in-memory
- *   tanpa crash (docs 04 edge case).
+ *   tanpa crash.
  */
 
 const STORAGE_PREFIX = "warungku.cart.";
@@ -217,7 +217,7 @@ export function CartProvider({
         setItems((prev) => {
           const nextQty = Math.max(1, Math.min(quantity, CART_QTY_MAX));
           if (quantity < 1) {
-            // 0 = minta hapus (docs 05 P02: "quantity 0 asks to remove").
+            // 0 = minta hapus.
             return prev.filter((i) => i.productId !== productId);
           }
           return prev.map((i) =>

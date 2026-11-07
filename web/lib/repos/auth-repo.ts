@@ -1,7 +1,7 @@
 /**
  * Auth repository — Supabase Auth (email + password).
  *
- * Akun demo (lihat docs/supabase/seed.sql), password semua `demo1234`:
+ * Akun demo (lihat supabase/seed.sql), password semua `demo1234`:
  *   - demo-roti@warungku.id
  *   - demo-dapur@warungku.id
  *   - demo-keripik@warungku.id
@@ -58,7 +58,7 @@ export async function login(input: LoginInput): Promise<Session> {
       throw new EmailNotConfirmedError();
     }
     if (error.status === 400 || error.code === "invalid_credentials") {
-      // Jangan bocorkan jenis error spesifik (docs 05 A02).
+      // Jangan bocorkan jenis error spesifik.
       throw new Error("Email atau kata sandi salah.");
     }
     throw new Error("Tidak dapat terhubung. Periksa koneksi lalu coba lagi.");

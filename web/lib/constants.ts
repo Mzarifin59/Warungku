@@ -7,8 +7,8 @@
  */
 
 /**
- * Slug terlarang — harus tetap sinkron dengan constraint database (Fase 2).
- * Lihat docs/web/03 §2.
+ * Slug terlarang — harus tetap sinkron dengan constraint database.
+ * Daftar ini menyerupai rute/kata yang dicadangkan aplikasi.
  */
 export const RESERVED_SLUGS: readonly string[] = [
   "dashboard",
@@ -23,7 +23,7 @@ export const RESERVED_SLUGS: readonly string[] = [
   "privacy",
 ];
 
-/** Batas aturan slug (docs/web/05 D02). */
+/** Batas panjang slug toko. */
 export const SLUG_MIN = 3;
 export const SLUG_MAX = 40;
 
@@ -100,9 +100,9 @@ export function formatWhatsApp(normalized: string | null): string {
   return `+62 ${part1} ${part2}${part3 ? " " + part3 : ""}`.trim();
 }
 
-/** Batas harga produk: 0 – 100.000.000 (docs/web/05 D04). */
+/** Batas harga produk: 0 – 100.000.000. */
 export const PRICE_MAX = 100_000_000;
 
-/** Jumlah maksimum per item di keranjang (docs/web/05 P02: 1–99). */
+/** Jumlah per item di keranjang: 1–99. */
 export const CART_QTY_MIN = 1;
 export const CART_QTY_MAX = 99;

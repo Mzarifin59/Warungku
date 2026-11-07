@@ -73,7 +73,7 @@ function DraftChecklist({ store }: { store: Store }) {
   return <Checklist store={store} publish={publish} />;
 }
 
-/** Checklist awal: Buat warung · Tambah produk · Terbitkan (docs 04 F1). */
+/** Checklist awal: Buat warung · Tambah produk · Terbitkan. */
 function Checklist({
   store,
   publish,

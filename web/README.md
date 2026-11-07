@@ -1,8 +1,8 @@
 # Warungku — Web
 
 Aplikasi Next.js untuk Warungku: marketplace publik, dashboard mitra, dan
-auth. Data & auth memakai Supabase (lihat `../supabase/` dan
-`../docs/supabase/`).
+auth. Data & auth memakai Supabase (skema, seed, dan panduan setup di
+`../supabase/`).
 
 ## Stack
 
@@ -43,7 +43,7 @@ bun run build
 
 ## Konvensi
 
-- Teks UI berbahasa Indonesia; ikuti spesifikasi di `../docs/web/`.
+- Teks UI berbahasa Indonesia; catat keputusan desain di `../docs/web/DECISIONS.md`.
 - Konten statis di `lib/content/`, bukan di dalam komponen.
 - Data dari Supabase selalu lewat `lib/repos/*` atau `lib/supabase/*`;
   komponen tidak memanggil `createClient()` langsung.

@@ -1,7 +1,7 @@
 /**
  * Composer pesan WhatsApp.
  *
- * Aturan kejujuran (docs 01 §6): total selalu "Estimasi", pesan tidak
+ * Aturan kejujuran: total selalu "Estimasi", pesan tidak
  * boleh mengklaim pesanan "berhasil/diterima".
  *
  * Keamanan:

@@ -11,7 +11,7 @@ import type { Database } from "@/lib/supabase/database.types";
  *    dengan alur PKCE. Hanya berhasil di browser yang sama dengan saat
  *    mendaftar (code verifier disimpan di cookie browser itu).
  * 2. `?token_hash=...&type=email` — template email kustom (lihat
- *    docs/supabase/guide-setup-supabase.md). Berhasil di perangkat mana pun.
+ *    supabase/README.md). Berhasil di perangkat mana pun.
  *
  * Berhasil → masuk otomatis lalu ke `next` (default dashboard).
  * Gagal → `/login?error=...` dengan pesan yang sesuai.

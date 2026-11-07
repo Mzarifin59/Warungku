@@ -3,7 +3,7 @@
 -- Tabel: auth.users (+identities) -> profiles, stores, categories, products
 --
 -- CARA PAKAI:
---   1. Pastikan skema dari plan.md (bagian 1-11) sudah dijalankan.
+--   1. Pastikan semua file di supabase/migrations/ sudah dijalankan.
 --   2. Buka SQL Editor di Supabase, pastikan role = postgres.
 --   3. Paste seluruh isi file ini lalu klik Run.
 --

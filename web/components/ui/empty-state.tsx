@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * Empty state — wajib selalu punya satu aksi (docs 01 §4.6: "Selalu ada
+ * Empty state — wajib selalu punya satu aksi ("Selalu ada
  * langkah berikutnya").
  */
 export function EmptyState({

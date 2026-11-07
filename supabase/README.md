@@ -72,7 +72,7 @@ Ikuti langkah berikut:
 
 ## 3. Jalankan SQL Setup
 
-Semua SQL ada di folder [`supabase/migrations/`](../../supabase/migrations)
+Semua SQL ada di folder [`supabase/migrations/`](migrations)
 di root repo. Jalankan **berurutan sesuai nama file** (nama diawali tanggal):
 
 | Urutan | File | Isi |
@@ -309,7 +309,7 @@ export type Database = Record<string, any>;
 
 ## 9. Setup Auth Trigger
 
-Supabase trigger `handle_new_user` (bagian 10 SQL di plan.md) otomatis membuat
+Supabase trigger `handle_new_user` (bagian 10 di `migrations/20261103000000_initial_schema.sql`) otomatis membuat
 row di `profiles` setiap kali user register. Tidak perlu coding tambahan -
 cukup pastikan:
 
@@ -329,10 +329,10 @@ Ada 2 cara untuk mengisi data dummy:
 
 ### Opsi A: Jalankan `seed.sql` (cepat, untuk testing)
 
-File: `docs/supabase/seed.sql`
+File: [`supabase/seed.sql`](seed.sql)
 
 1. Di Supabase Dashboard, buka **Edits SQL** (ikon `</>` di sidebar)
-2. Buka file [`supabase/seed.sql`](../../supabase/seed.sql) dan copy-paste seluruh isinya
+2. Buka file `seed.sql` dan copy-paste seluruh isinya
 3. **Penting**: pastikan SQL Editor berjalan sebagai role **`postgres`**
    (superuser), bukan `anon`. Klik dropdown role di pojok kanan atas
    query editor → pilih `postgres`.

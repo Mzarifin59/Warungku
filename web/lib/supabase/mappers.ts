@@ -45,7 +45,7 @@ export function byCategoryOrder(a: Category, b: Category): number {
   return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, "id");
 }
 
-/** Urutan produk: `sortOrder` naik, lalu terbaru dulu (docs 05 D03). */
+/** Urutan produk: `sortOrder` naik, lalu terbaru dulu. */
 export function byProductOrder(a: Product, b: Product): number {
   return (
     a.sortOrder - b.sortOrder ||

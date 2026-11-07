@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Skeleton loading — bentuk menyerupai elemen akhir (docs 10 / AGENTS).
+ * Skeleton loading — bentuk menyerupai elemen akhir.
  * Tidak ada spinner layar penuh. Animasi pulse halus, dinonaktifkan saat
  * prefers-reduced-motion.
  */
