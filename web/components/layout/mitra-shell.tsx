@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ExternalLink, Store, UserRound } from "lucide-react";
-import { Icon } from "@/components/icon";
+import { LogoMark } from "@/components/layout/logo-mark";
 import { LogoutButton, MitraNavigation } from "@/components/layout/mitra-navigation";
 import { useDashboardStore } from "@/lib/dashboard-provider";
 import { useSession } from "@/lib/session-store";
@@ -17,10 +17,7 @@ export function MitraShell({ children }: { children: ReactNode }) {
           href="/"
           aria-label="Warungku — Beranda"
         >
-          <span className="relative grid size-9 place-items-center text-primary">
-            <Icon name="bag" size={32} />
-            <span className="absolute top-[11px] text-xs font-bold text-white">W</span>
-          </span>
+          <LogoMark size={36} />
           Warungku
         </Link>
         <MitraNavigation />

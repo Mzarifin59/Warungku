@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { LogoMark } from "@/components/layout/logo-mark";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { Icon } from "@/components/icon";
@@ -41,15 +41,7 @@ export function SiteHeader() {
           href="/"
           aria-label={`${site.name} — Beranda`}
         >
-          <Image
-            src="/logo_warungku.svg"
-            alt=""
-            width={32}
-            height={32}
-            className="size-8"
-            priority
-            unoptimized
-          />
+          <LogoMark size={32} />
           <span>{site.name}</span>
         </Link>
 

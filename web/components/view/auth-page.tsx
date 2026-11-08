@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Icon } from "@/components/icon";
+import { LogoMark } from "@/components/layout/logo-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MailCheck } from "lucide-react";
@@ -112,10 +112,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           href="/"
           aria-label="Warungku — Beranda"
         >
-          <span className="relative grid size-7 place-items-center text-primary">
-            <Icon name="bag" size={24} />
-            <span className="absolute top-[8px] text-[10px] font-bold text-white">W</span>
-          </span>
+          <LogoMark size={28} />
           <span>Warungku</span>
         </Link>
         <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-bold text-[#233e62] sm:text-base">
