@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -40,10 +41,15 @@ export function SiteHeader() {
           href="/"
           aria-label={`${site.name} — Beranda`}
         >
-          <span className="relative grid size-8 place-items-center text-primary">
-            <Icon name="bag" size={25} />
-            <span className="absolute top-[9px] text-[11px] font-bold text-white">W</span>
-          </span>
+          <Image
+            src="/logo_warungku.svg"
+            alt=""
+            width={32}
+            height={32}
+            className="size-8"
+            priority
+            unoptimized
+          />
           <span>{site.name}</span>
         </Link>
 
